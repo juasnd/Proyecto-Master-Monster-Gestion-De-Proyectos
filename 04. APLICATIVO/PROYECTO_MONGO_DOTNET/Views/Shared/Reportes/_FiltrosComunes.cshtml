@@ -1,0 +1,20 @@
+@using PROYECTO_MONGO_DOTNET.Models
+@{
+    var proyectos = (ViewData["ReporteTipo"]?.ToString() ?? "") == "PROYECTOS";
+    var departamentos = ViewData["DepartamentosReporte"] as IReadOnlyCollection<Departamento> ?? [];
+    var jefes = ViewData["JefesReporte"] as IReadOnlyCollection<Empleado> ?? [];
+}
+<div class="reportes-filtros-grid">
+    <div class="grupo-campo"><label for="reporteTexto">Búsqueda</label><input id="reporteTexto" name="textoBusqueda" type="text" placeholder="@(proyectos ? "Nombre, jefe o departamento" : "Código, nombre, jefe o departamento")"></div>
+    <div class="grupo-campo"><label for="reporteEstado">Estado</label><select id="reporteEstado" name="estado"><option value="">Todos</option><option value="PLANIFICADO">Planificado</option><option value="EN_CURSO">En curso</option><option value="PAUSADO">Pausado</option><option value="FINALIZADO">Finalizado</option><option value="CANCELADO">Cancelado</option></select></div>
+    @if (proyectos)
+    {
+        <div class="grupo-campo"><label for="reportePrioridad">Prioridad</label><select id="reportePrioridad" name="prioridad"><option value="">Todas</option><option value="BAJA">Baja</option><option value="MEDIA">Media</option><option value="ALTA">Alta</option><option value="CRITICA">Crítica</option></select></div>
+        <div class="grupo-campo"><label for="reporteDepartamento">Departamento</label><select id="reporteDepartamento" name="codigoDepartamento"><option value="">Todos</option>@foreach (var d in departamentos) { <option value="@d.Codigo">@d.Descripcion</option> }</select></div>
+        <div class="grupo-campo"><label for="reporteJefe">Jefe del proyecto</label><select id="reporteJefe" name="codigoJefe"><option value="">Todos</option>@foreach (var e in jefes) { <option value="@e.PeempCodigo">@e.Persona.Nombres @e.Persona.Apellidos</option> }</select></div>
+        <div class="grupo-campo"><label for="reporteActivo">Estado del registro</label><select id="reporteActivo" name="activo"><option value="">Activos e inactivos</option><option value="true">Solo activos</option><option value="false">Solo inactivos</option></select></div>
+    }
+    <div class="grupo-campo"><label for="reporteFechaDesde">Fecha inicial desde</label><input id="reporteFechaDesde" name="fechaInicioDesde" type="date"></div>
+    <div class="grupo-campo"><label for="reporteFechaHasta">Fecha inicial hasta</label><input id="reporteFechaHasta" name="fechaInicioHasta" type="date"></div>
+    <input type="hidden" name="cantidad" value="5000">
+</div>

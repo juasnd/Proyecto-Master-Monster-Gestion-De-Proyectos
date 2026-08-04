@@ -1,0 +1,31 @@
+@{
+    ViewData["Title"] = "Inicio";
+    var perfilNombre = Context.Session.GetString("perfilNombre") ?? "";
+    var mensaje = (string?)ViewBag.Mensaje;
+}
+<section class="panel-inicio-treeview">
+    <div class="bienvenida-dashboard bienvenida-dashboard-tree">
+        <div class="bienvenida-texto">
+            <h2>Bienvenido al sistema en SQL Server</h2>
+            <p>
+                Master Monster es un sistema de gestion de proyectos.
+                Desde este panel puedes acceder a las opciones permitidas para tu perfil
+                @perfilNombre.
+            </p>
+
+            @if (!string.IsNullOrWhiteSpace(perfilNombre))
+            {
+                <span class="badge-perfil-dashboard">Perfil @perfilNombre</span>
+            }
+
+            @if (mensaje == "clave_actualizada")
+            {
+                <p class="mensaje-exito-general">Contrasena actualizada correctamente.</p>
+            }
+        </div>
+
+        <div class="bienvenida-imagen">
+            <img src="/img/inge.monster.png" alt="Personaje Master Monster">
+        </div>
+    </div>
+</section>

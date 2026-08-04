@@ -1,0 +1,192 @@
+@model UsuariosPaginaVm
+@{
+    ViewData["Title"] = "Usuarios";
+}
+<main class="crud-page usuario-page">
+    <section class="crud-titulo usuarios-titulo-flex">
+        <div>
+            <h2>Gestionar usuarios</h2>
+            <p>Crea cuentas, asigna perfiles y controla el acceso al sistema.</p>
+        </div>
+        <button type="button" class="btn-crud verde btn-nuevo-usuario" data-modal-open="modalElegirUsuario">Nuevo usuario</button>
+    </section>
+
+    @if (Model.Mensaje == "creado") { <p class="mensaje-exito-general">Usuario creado correctamente. Deberá cambiar la contraseña temporal en su próximo ingreso.</p> }
+    else if (Model.Mensaje == "perfil") { <p class="mensaje-exito-general">Perfil asignado correctamente.</p> }
+    else if (Model.Mensaje == "estado") { <p class="mensaje-exito-general">Estado del usuario actualizado correctamente.</p> }
+    @if (!string.IsNullOrWhiteSpace(Model.Error)) { <p class="mensaje-error-general">@Model.Error</p> }
+
+    <section class="crud-contenedor usuarios-fase1 usuarios-panel-limpio">
+        <div class="crud-toolbar usuarios-toolbar-mejorada">
+            <div class="crud-toolbar-left usuarios-toolbar-left">
+                <a href="/UsuarioController" class="btn-crud celeste">Recargar</a>
+                <a href="/RestablecerClaveController" class="btn-crud reporte">Restablecer contraseña</a>
+            </div>
+            <div class="buscar-registros usuarios-buscar">
+                <label for="buscarUsuario">Buscar:</label>
+                <input id="buscarUsuario" type="search" placeholder="Login, persona, perfil o estado...">
+            </div>
+        </div>
+
+        <div class="tabla-contenedor tabla-clara tabla-seguridad tabla-usuarios-simple">
+            <table class="tabla-crud" id="tablaUsuarios" data-paginacion="true" data-paginacion-tamanio="5">
+                <thead><tr><th>Cuenta</th><th>Tipo</th><th>Perfil</th><th>Estado</th><th>Operaciones</th></tr></thead>
+                <tbody>
+                @if (Model.Usuarios.Any())
+                {
+                    foreach (var usuario in Model.Usuarios)
+                    {
+                        var nombre = string.IsNullOrWhiteSpace(usuario.NombrePersona) ? "Persona no encontrada" : usuario.NombrePersona;
+                        var tipo = !string.IsNullOrWhiteSpace(usuario.CodigoEmpleado) ? "Empleado" : usuario.TipoPersona == "INV" ? "Externo" : "Persona";
+                        var perfilCodigo = usuario.Perfil?.Codigo ?? "";
+                        var perfilNombre = usuario.Perfil?.Descripcion ?? "Sin perfil activo";
+                        var estado = usuario.EstaActivo ? "Activo" : usuario.EstaBloqueado ? "Bloqueado" : "Inactivo";
+                        var estadoDestino = usuario.EstaActivo ? "I" : "A";
+                        var estadoAccion = usuario.EstaActivo ? "Inactivar cuenta" : "Activar cuenta";
+                        var ultimo = usuario.UltimoAcceso?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "";
+                        <tr data-usuario-row
+                            data-login="@usuario.Login" data-persona="@nombre" data-cedula="@usuario.Cedula"
+                            data-tipo="@tipo" data-codigo-empleado="@usuario.CodigoEmpleado"
+                            data-perfil="@perfilNombre" data-perfil-codigo="@perfilCodigo"
+                            data-estado="@estado" data-estado-destino="@estadoDestino" data-estado-accion="@estadoAccion"
+                            data-cambio="@(usuario.RequiereCambioClave ? "Pendiente" : "No requerido")"
+                            data-intentos="@usuario.IntentosFallidos" data-ultimo="@ultimo"
+                            data-reset-url="/RestablecerClaveController?login=@Uri.EscapeDataString(usuario.Login)">
+                            <td class="usuario-cuenta-cell">
+                                <strong>@usuario.Login</strong>
+                                <span>@nombre</span>
+                                <small>@(string.IsNullOrWhiteSpace(usuario.Cedula) ? usuario.Email : usuario.Cedula)</small>
+                            </td>
+                            <td>@tipo</td>
+                            <td class="usuario-perfil-cell">@perfilNombre</td>
+                            <td><strong>@estado</strong><small class="usuario-mini-info">Intentos: @usuario.IntentosFallidos</small></td>
+                            <td>
+                                <div class="acciones-tabla usuario-acciones-fase1">
+                                    <button type="button" class="btn-accion-icono accion-ver" data-usuario-detalle title="Ver detalle" aria-label="Ver detalle"><img src="/img/iconos_master_monster/ver.png" alt=""></button>
+                                    <button type="button" class="btn-accion-texto accion-editar" data-usuario-perfil>Perfil</button>
+                                    <button type="button" class="btn-accion-texto accion-seguridad" data-usuario-seguridad>Seguridad</button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr><td colspan="5" class="tabla-vacia">No existen usuarios registrados.</td></tr>
+                }
+                </tbody>
+            </table>
+        </div>
+        <div class="tabla-footer"></div>
+    </section>
+</main>
+
+<div id="modalElegirUsuario" class="usuario-modal-backdrop" hidden>
+    <section class="usuario-modal usuario-modal-eleccion" role="dialog" aria-modal="true" aria-labelledby="tituloElegirUsuario">
+        <button type="button" class="usuario-modal-cerrar" data-modal-close aria-label="Cerrar">×</button>
+        <h3 id="tituloElegirUsuario">Crear usuario</h3>
+        <p class="usuario-modal-ayuda">Seleccione si la cuenta pertenece a una persona registrada o a un usuario externo.</p>
+        <div class="usuario-choice-grid">
+            <button type="button" class="usuario-choice-card" data-modal-switch="modalUsuarioExistente"><strong>Persona registrada</strong><span>Usa los datos de una persona o empleado que ya existe.</span></button>
+            <button type="button" class="usuario-choice-card" data-modal-switch="modalUsuarioExterno"><strong>Usuario externo</strong><span>Crea primero una persona externa y luego su cuenta.</span></button>
+        </div>
+    </section>
+</div>
+
+<div id="modalUsuarioExistente" class="usuario-modal-backdrop" hidden>
+    <section class="usuario-modal usuario-modal-lg" role="dialog" aria-modal="true" aria-labelledby="tituloUsuarioExistente">
+        <button type="button" class="usuario-modal-cerrar" data-modal-close aria-label="Cerrar">×</button>
+        <h3 id="tituloUsuarioExistente">Cuenta para persona registrada</h3>
+        <form method="post" action="/UsuarioController/crear" class="form-usuario-grid">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="TipoRegistro" value="existente">
+            <div class="grupo-campo campo-doble-usuario">
+                <label for="personaCodigo">Persona</label>
+                <select id="personaCodigo" name="CodigoPersona" required>
+                    <option value="">Seleccione...</option>
+                    @foreach (var persona in Model.PersonasDisponibles)
+                    {
+                        <option value="@persona.Codigo" data-cedula="@persona.Cedula" data-email="@persona.Email">@persona.NombreCompleto - @(string.IsNullOrWhiteSpace(persona.Cedula) ? persona.Codigo : persona.Cedula)</option>
+                    }
+                </select>
+                @if (!Model.PersonasDisponibles.Any()) { <small class="campo-ayuda">Todas las personas registradas ya tienen usuario.</small> }
+            </div>
+            <div class="grupo-campo"><label for="loginExistente">Login</label><input id="loginExistente" name="Login" maxlength="60" required></div>
+            <div class="grupo-campo"><label for="perfilExistente">Perfil</label><select id="perfilExistente" name="PerfilCodigo" required><option value="">Seleccione...</option>@foreach (var perfil in Model.Perfiles) { <option value="@perfil.Codigo">@perfil.Descripcion</option> }</select></div>
+            <div class="grupo-campo"><label>Contraseña temporal</label><input name="ClaveTemporal" type="password" autocomplete="new-password" required></div>
+            <div class="grupo-campo"><label>Confirmación</label><input name="Confirmacion" type="password" autocomplete="new-password" required></div>
+            <p class="campo-doble-usuario campo-ayuda">Mínimo 8 caracteres con mayúscula, minúscula, número y símbolo.</p>
+            <div class="usuario-modal-actions campo-doble-usuario"><button type="button" class="btn-crud celeste" data-modal-close>Cancelar</button><button class="btn-crud verde" type="submit">Crear usuario</button></div>
+        </form>
+    </section>
+</div>
+
+<div id="modalUsuarioExterno" class="usuario-modal-backdrop" hidden>
+    <section class="usuario-modal usuario-modal-lg" role="dialog" aria-modal="true" aria-labelledby="tituloUsuarioExterno">
+        <button type="button" class="usuario-modal-cerrar" data-modal-close aria-label="Cerrar">×</button>
+        <h3 id="tituloUsuarioExterno">Crear usuario externo</h3>
+        <form method="post" action="/UsuarioController/crear" class="form-usuario-grid">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="TipoRegistro" value="externo">
+            <div class="grupo-campo"><label>Nombres</label><input name="Nombres" maxlength="80" required></div>
+            <div class="grupo-campo"><label>Apellidos</label><input name="Apellidos" maxlength="80" required></div>
+            <div class="grupo-campo"><label for="cedula">Cédula</label><input id="cedula" name="Cedula" maxlength="20"></div>
+            <div class="grupo-campo"><label for="email">Correo</label><input id="email" name="Email" type="email" maxlength="120"></div>
+            <div class="grupo-campo"><label for="loginExterno">Login</label><input id="loginExterno" name="Login" maxlength="60" required></div>
+            <div class="grupo-campo"><label>Perfil</label><select name="PerfilCodigo" required><option value="">Seleccione...</option>@foreach (var perfil in Model.Perfiles) { <option value="@perfil.Codigo">@perfil.Descripcion</option> }</select></div>
+            <div class="grupo-campo"><label>Contraseña temporal</label><input name="ClaveTemporal" type="password" autocomplete="new-password" required></div>
+            <div class="grupo-campo"><label>Confirmación</label><input name="Confirmacion" type="password" autocomplete="new-password" required></div>
+            <div class="usuario-modal-actions campo-doble-usuario"><button type="button" class="btn-crud celeste" data-modal-close>Cancelar</button><button class="btn-crud verde" type="submit">Crear usuario</button></div>
+        </form>
+    </section>
+</div>
+
+<div id="modalDetalleUsuario" class="usuario-modal-backdrop" hidden>
+    <section class="usuario-modal usuario-modal-md" role="dialog" aria-modal="true" aria-labelledby="tituloDetalleUsuario">
+        <button type="button" class="usuario-modal-cerrar" data-modal-close aria-label="Cerrar">×</button>
+        <h3 id="tituloDetalleUsuario">Detalle del usuario</h3>
+        <div class="usuario-detalle-grid">
+            <div><span>Login</span><strong id="detalleLogin"></strong></div><div><span>Persona</span><strong id="detallePersona"></strong></div>
+            <div><span>Cédula</span><strong id="detalleCedula"></strong></div><div><span>Tipo</span><strong id="detalleTipo"></strong></div>
+            <div><span>Código empleado</span><strong id="detalleCodigoEmpleado"></strong></div><div><span>Perfil</span><strong id="detallePerfil"></strong></div>
+            <div><span>Estado</span><strong id="detalleEstado"></strong></div><div><span>Cambio de contraseña</span><strong id="detalleCambio"></strong></div>
+            <div><span>Intentos fallidos</span><strong id="detalleIntentos"></strong></div><div><span>Último acceso</span><strong id="detalleUltimo"></strong></div>
+        </div>
+    </section>
+</div>
+
+<div id="modalCambiarPerfil" class="usuario-modal-backdrop" hidden>
+    <section class="usuario-modal usuario-modal-sm" role="dialog" aria-modal="true" aria-labelledby="tituloCambiarPerfil">
+        <button type="button" class="usuario-modal-cerrar" data-modal-close aria-label="Cerrar">×</button>
+        <h3 id="tituloCambiarPerfil">Asignar perfil</h3>
+        <p id="perfilUsuarioResumen" class="usuario-modal-ayuda"></p>
+        <form method="post" action="/UsuarioController/perfil" class="usuario-modal-form">
+            @Html.AntiForgeryToken()
+            <input type="hidden" id="perfilLogin" name="Login">
+            <div class="grupo-campo campo-doble-usuario"><label for="perfilCodigoModal">Perfil activo</label><select id="perfilCodigoModal" name="PerfilCodigo" required><option value="">Seleccione...</option>@foreach (var perfil in Model.Perfiles) { <option value="@perfil.Codigo">@perfil.Descripcion</option> }</select></div>
+            <div class="usuario-modal-actions campo-doble-usuario"><button type="button" class="btn-crud celeste" data-modal-close>Cancelar</button><button type="submit" class="btn-crud verde">Guardar perfil</button></div>
+        </form>
+    </section>
+</div>
+
+<div id="modalSeguridadUsuario" class="usuario-modal-backdrop" hidden>
+    <section class="usuario-modal usuario-modal-md" role="dialog" aria-modal="true" aria-labelledby="tituloSeguridadUsuario">
+        <button type="button" class="usuario-modal-cerrar" data-modal-close aria-label="Cerrar">×</button>
+        <h3 id="tituloSeguridadUsuario">Seguridad de la cuenta</h3>
+        <p id="seguridadUsuarioResumen" class="usuario-modal-ayuda"></p>
+        <div class="usuario-seguridad-grid">
+            <a id="resetUsuarioLink" class="usuario-seguridad-card" href="/RestablecerClaveController"><strong>Restablecer contraseña</strong><span>Asigna una contraseña temporal y desbloquea la cuenta.</span></a>
+            <form id="estadoUsuarioForm" method="post" action="/UsuarioController/estado">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="estadoUsuarioLogin" name="Login">
+                <input type="hidden" id="estadoUsuarioEstado" name="Estado">
+                <button type="submit" class="usuario-seguridad-card" style="width:100%"><strong id="estadoUsuarioAccion">Cambiar estado</strong><span id="estadoUsuarioDescripcion"></span></button>
+            </form>
+        </div>
+    </section>
+</div>
+
+@section Scripts {
+    <script src="/js/usuarios.js?v=20260720-integracion1" defer></script>
+    <script src="/js/paginacion.js?v=20260720-integracion1" defer></script>
+}

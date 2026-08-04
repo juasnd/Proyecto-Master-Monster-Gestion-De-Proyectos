@@ -1,0 +1,5 @@
+@model PROYECTO_MONGO_DOTNET.Models.Dtos.Seguridad.CambiarClaveDto
+@{ ViewData["Title"] = "Cambiar mi contraseña"; }
+<main class="crud-page"><section class="crud-titulo"><div><h2>Cambiar mi contraseña</h2><p>Actualiza únicamente la contraseña de tu usuario.</p></div></section>
+@if (ViewBag.Error != null) { <p class="mensaje-error-general">@ViewBag.Error</p> }
+<section class="crud-contenedor"><div class="form-crud-box"><form method="post" action="/cambiarClave.jsp" class="form-grid-modulo">@Html.AntiForgeryToken()<div class="grupo-campo"><label>Contraseña actual</label><input name="ClaveActual" type="password" autocomplete="current-password" required></div><div class="grupo-campo"><label>Nueva contraseña</label><input name="NuevaClave" type="password" autocomplete="new-password" required></div><div class="grupo-campo"><label>Confirmación</label><input name="Confirmacion" type="password" autocomplete="new-password" required></div><p class="campo-ancho">Debe tener entre 8 y 128 caracteres e incluir mayúscula, minúscula, número y símbolo.</p><button class="btn-crud verde">Cambiar contraseña</button></form></div></section></main>

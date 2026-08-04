@@ -1,0 +1,85 @@
+@model PerfilesPaginaVm
+@{
+    ViewData["Title"] = "Perfiles";
+    var editar = Model.Modo == "editar" && Model.PerfilEditar != null;
+}
+<main class="crud-page">
+    <section class="crud-titulo">
+        <div><h2>Gestionar perfiles</h2><p>Administra roles de acceso y sus permisos dentro del sistema.</p></div>
+    </section>
+
+    @if (Model.Mensaje == "creado") { <p class="mensaje-exito-general">Perfil creado correctamente.</p> }
+    else if (Model.Mensaje == "actualizado") { <p class="mensaje-exito-general">Perfil actualizado correctamente.</p> }
+    else if (Model.Mensaje == "estado") { <p class="mensaje-exito-general">Estado del perfil actualizado correctamente.</p> }
+    @if (!string.IsNullOrWhiteSpace(Model.Error)) { <p class="mensaje-error-general">@Model.Error</p> }
+
+    <section class="crud-contenedor">
+        <div class="crud-toolbar">
+            <div class="crud-toolbar-left">
+                <a href="/PerfilController?accion=nuevo" class="btn-crud verde">Nuevo perfil</a>
+                <a href="/PerfilController" class="btn-crud celeste">Recargar</a>
+                <a href="/PermisoController" class="btn-crud reporte">Opciones y permisos</a>
+            </div>
+            <div class="buscar-registros"><label for="buscarPerfil">Buscar:</label><input id="buscarPerfil" type="search" placeholder="Código, descripción o estado..."></div>
+        </div>
+
+        @if (Model.Modo == "nuevo" || editar)
+        {
+            var perfil = Model.PerfilEditar ?? new Perfil();
+            <div class="form-crud-box">
+                <h3>@(editar ? "Editar perfil" : "Crear perfil")</h3>
+                <form method="post" action="@(editar ? "/PerfilController/actualizar" : "/PerfilController/crear")" class="form-grid-modulo">
+                    @Html.AntiForgeryToken()
+                    <div class="grupo-campo">
+                        <label for="codigoPerfil">Código</label>
+                        <input id="codigoPerfil" name="Codigo" value="@perfil.Codigo" maxlength="20" pattern="[A-Za-z0-9_]{3,20}" required @(editar ? "readonly" : null)>
+                    </div>
+                    <div class="grupo-campo"><label for="descripcionPerfil">Descripción</label><input id="descripcionPerfil" name="Descripcion" value="@perfil.Descripcion" maxlength="80" required></div>
+                    <div class="grupo-campo campo-ancho"><label for="observacionPerfil">Observación</label><textarea id="observacionPerfil" name="Observacion" maxlength="300" rows="3">@perfil.Observacion</textarea></div>
+                    <div class="campo-ancho busqueda-acciones"><button class="btn-crud verde" type="submit">@(editar ? "Actualizar" : "Guardar")</button><a class="btn-crud celeste" href="/PerfilController">Cancelar</a></div>
+                </form>
+            </div>
+        }
+
+        <div class="tabla-contenedor tabla-clara">
+            <table class="tabla-crud" id="tablaPerfiles" data-paginacion="true" data-paginacion-tamanio="5">
+                <thead><tr><th>Código</th><th>Descripción</th><th>Observación</th><th>Usuarios</th><th>Estado</th><th>Operaciones</th></tr></thead>
+                <tbody>
+                @if (Model.Perfiles.Any())
+                {
+                    foreach (var perfil in Model.Perfiles)
+                    {
+                        var estadoDestino = perfil.EstaActivo ? "I" : "A";
+                        var accionEstado = perfil.EstaActivo ? "Inactivar" : "Activar";
+                        <tr>
+                            <td><strong>@perfil.Codigo</strong></td>
+                            <td>@perfil.Descripcion</td>
+                            <td>@(string.IsNullOrWhiteSpace(perfil.Observacion) ? "—" : perfil.Observacion)</td>
+                            <td>@perfil.UsuariosAsignados</td>
+                            <td>@(perfil.EstaActivo ? "Activo" : "Inactivo")</td>
+                            <td>
+                                <div class="acciones-tabla">
+                                    <a class="btn-accion-icono accion-editar" href="/PerfilController?accion=editar&codigo=@Uri.EscapeDataString(perfil.Codigo)" title="Editar" aria-label="Editar"><img src="/img/iconos_master_monster/editar.png" alt=""></a>
+                                    <a class="btn-accion-texto accion-ver" href="/PermisoController?perfil=@Uri.EscapeDataString(perfil.Codigo)">Permisos</a>
+                                    <form method="post" action="/PerfilController/estado" onsubmit="return confirm('¿Desea @accionEstado.ToLowerInvariant() este perfil?');">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="Codigo" value="@perfil.Codigo"><input type="hidden" name="Estado" value="@estadoDestino">
+                                        <button type="submit" class="btn-accion-texto @(perfil.EstaActivo ? "accion-eliminar" : "accion-activar")">@accionEstado</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else { <tr><td colspan="6" class="tabla-vacia">No existen perfiles registrados.</td></tr> }
+                </tbody>
+            </table>
+        </div>
+        <div class="tabla-footer"></div>
+    </section>
+</main>
+
+@section Scripts {
+    <script src="/js/perfiles.js?v=20260720-integracion1" defer></script>
+    <script src="/js/paginacion.js?v=20260720-integracion1" defer></script>
+}

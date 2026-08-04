@@ -1,0 +1,8 @@
+[Bb]in/
+[Oo]bj/
+.vs/
+.playwright-cli/
+output/
+*.csproj.user
+*.user
+

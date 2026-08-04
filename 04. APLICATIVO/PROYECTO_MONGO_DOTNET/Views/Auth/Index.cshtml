@@ -1,0 +1,78 @@
+@{
+    Layout = null;
+    var error = (string?)ViewBag.Error;
+    var num = (string?)ViewBag.Num;
+}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inicio de sesión | Master Monster</title>
+    <link rel="icon" type="image/png" href="/img/favicon.png">
+    <link rel="stylesheet" href="/CSS/estilos.css" asp-append-version="true">
+    <script src="/js/validaciones.js" defer></script>
+</head>
+<body>
+<main class="contenedor-login">
+    <section class="login-panel">
+        <div class="login-izquierda">
+            <div class="logo-monster">
+                <img src="/img/Monsters-Inc.-Symbol.png" alt="Logo Master Monster">
+            </div>
+
+            <h1>Master Monster</h1>
+            <p class="subtitulo">Inicio de sesión</p>
+
+            @if (error == "usuario_no_existe")
+            {
+                <p class="mensaje-error-general">El usuario ingresado no existe.</p>
+            }
+            else if (error == "bloqueado")
+            {
+                <p class="mensaje-error-general">La cuenta está bloqueada por superar los 3 intentos.</p>
+            }
+            else if (error == "inactivo")
+            {
+                <p class="mensaje-error-general">La cuenta se encuentra inactiva.</p>
+            }
+            else if (error == "intentos")
+            {
+                <p class="mensaje-error-general">Usuario o contraseña incorrectos. Intento @num de 3.</p>
+            }
+
+            <form id="formLogin" action="/Controller" method="post" novalidate>
+                @Html.AntiForgeryToken()
+                <div class="grupo-campo">
+                    <label for="usuario">Usuario</label>
+                    <input type="text" id="usuario" name="usuario" placeholder="Ingrese su usuario" autocomplete="username">
+                    <small class="mensaje-error" id="errorUsuario"></small>
+                </div>
+
+                <div class="grupo-campo">
+                    <label for="password">Contraseña</label>
+                    <div class="campo-password">
+                        <input type="password" id="password" name="password" placeholder="Ingrese su contraseña" autocomplete="current-password">
+                    </div>
+                    <small class="mensaje-error" id="errorPassword"></small>
+                </div>
+
+                <button type="submit" class="btn-ingresar">Ingresar</button>
+            </form>
+
+            <p class="pie">GUTIÉRREZ - LANDÁZURI - LEITON</p>
+        </div>
+
+        <div class="login-derecha">
+            <div class="contenido-derecha">
+                <div class="logo-derecha">
+                    <img src="/img/inge.monster.png" alt="Personaje Master Monster">
+                </div>
+                <h2>Sistema de gestión de proyectos</h2>
+                <p>Master Monster permite administrar proyectos, usuarios e información de forma organizada, segura y sencilla.</p>
+            </div>
+        </div>
+    </section>
+</main>
+</body>
+</html>

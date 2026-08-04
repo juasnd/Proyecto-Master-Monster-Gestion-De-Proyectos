@@ -1,0 +1,27 @@
+@model PROYECTO_MONGO_DOTNET.Models.ViewModels.ControlPresupuestarioPaginaVm
+@{
+    ViewData["Title"] = "Control presupuestario";
+    ViewData["ReporteEndpoint"] = "/Finanzas/Reportes/ControlPresupuestario";
+    ViewData["ReporteTitulo"] = "Reporte de control presupuestario";
+    ViewData["ReporteArchivo"] = "control_presupuestario";
+}
+<main class="crud-page">
+    <section class="crud-titulo"><div><h2>Control presupuestario</h2><p>Costos planificados, gastos aprobados, compromisos estimados y saldo disponible.</p></div></section>
+    <section class="crud-contenedor">
+        <div class="crud-toolbar"><button class="btn-crud reporte" data-reporte-abrir>Reportes</button></div>
+        <div class="tabla-contenedor tabla-clara">
+            <table class="tabla-crud">
+                <thead><tr><th>Proyecto</th><th>Presupuesto</th><th>Costo laboral planificado</th><th>Gastos aprobados</th><th>Costo comprometido estimado</th><th>Saldo</th><th>Consumo</th><th>Situación</th></tr></thead>
+                <tbody>
+                @foreach (var x in Model.Proyectos)
+                {
+                    <tr><td>@x.NombreProyecto</td><td>@x.Presupuesto.ToString("N2")</td><td>@x.CostoLaboralPlanificado.ToString("N2")</td><td>@x.GastosAprobados.ToString("N2")</td><td title="Estimación basada en horas planificadas, avance y gastos aprobados.">@x.CostoComprometidoEstimado.ToString("N2")</td><td>@x.SaldoDisponible.ToString("N2")</td><td>@x.PorcentajeConsumo.ToString("N2")%</td><td>@(x.Excedido ? "Excedido" : x.EnAlerta ? "En alerta" : "Normal")</td></tr>
+                }
+                @if (!Model.Proyectos.Any()) { <tr><td colspan="8" class="tabla-vacia">No existen proyectos para calcular.</td></tr> }
+                </tbody>
+            </table>
+        </div>
+    </section>
+    <partial name="~/Views/Shared/Reportes/_ModalReporte.cshtml" />
+</main>
+@section Scripts { <script src="/js/reportes-parametrizados.js?v=20260727" defer></script> }

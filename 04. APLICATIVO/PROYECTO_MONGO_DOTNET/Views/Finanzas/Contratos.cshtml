@@ -1,0 +1,21 @@
+@model PROYECTO_MONGO_DOTNET.Models.ViewModels.ContratosPaginaVm
+@{ ViewData["Title"] = "Contratos y sueldo base"; ViewData["ReporteEndpoint"] = "/Finanzas/Reportes/Contratos"; ViewData["ReporteTitulo"] = "Reporte parametrizado de contratos"; ViewData["ReporteArchivo"] = "reporte_contratos"; }
+<main class="crud-page">
+<section class="crud-titulo"><div><h2>Contratos y sueldo base</h2><p>Conserva el historial contractual y salarial de los empleados.</p></div></section>
+@if (!string.IsNullOrWhiteSpace(Model.Mensaje)) { <p class="mensaje-exito-general">Operación completada correctamente.</p> }
+@if (!string.IsNullOrWhiteSpace(Model.Error)) { <p class="mensaje-error-general">@Model.Error</p> }
+<section class="crud-contenedor">
+<div class="crud-toolbar"><button class="btn-crud reporte" data-reporte-abrir>Reportes</button></div>
+<div class="form-crud-box"><h3>Registrar contrato</h3><form method="post" action="/Finanzas/Contratos" class="form-grid-modulo">
+@Html.AntiForgeryToken()
+<div class="grupo-campo"><label>Empleado</label><select name="CodigoEmpleado" required><option value="">Seleccione...</option>@foreach (var e in Model.Empleados) { <option value="@e.PeempCodigo">@e.Persona.Nombres @e.Persona.Apellidos</option> }</select></div>
+<div class="grupo-campo"><label>Tipo de contrato</label><input name="TipoContrato" required></div>
+<div class="grupo-campo"><label>Sueldo base</label><input name="SueldoBase" type="number" min="0.01" step="0.01" required></div>
+<div class="grupo-campo"><label>Horas mensuales</label><input name="HorasMensuales" type="number" min="0.01" step="0.01" value="160" required></div>
+<div class="grupo-campo"><label>Fecha inicial</label><input name="FechaInicio" type="date" required></div><div class="grupo-campo"><label>Fecha final</label><input name="FechaFin" type="date"></div>
+<input type="hidden" name="Estado" value="ACTIVO"><button class="btn-crud verde">Guardar contrato</button></form></div>
+<div class="tabla-contenedor tabla-clara"><table class="tabla-crud"><thead><tr><th>Código</th><th>Empleado</th><th>Tipo</th><th>Sueldo</th><th>Horas mensuales</th><th>Vigencia</th><th>Estado</th><th>Operaciones</th></tr></thead><tbody>
+@foreach (var x in Model.Contratos) { <tr><td>@x.CodigoContrato</td><td>@x.CodigoEmpleado</td><td>@x.TipoContrato</td><td>@x.SueldoBase.ToString("N2")</td><td>@x.HorasMensuales</td><td>@x.FechaInicio.ToString("yyyy-MM-dd") - @(x.FechaFin?.ToString("yyyy-MM-dd") ?? "Vigente")</td><td>@x.Estado</td><td>@if (x.Activo) { <form method="post" action="/Finanzas/Contratos/inactivar">@Html.AntiForgeryToken()<input type="hidden" name="codigo" value="@x.CodigoContrato"><button class="btn-accion-texto accion-eliminar">Inactivar</button></form> }</td></tr> }
+@if (!Model.Contratos.Any()) { <tr><td colspan="8" class="tabla-vacia">No existen contratos.</td></tr> }
+</tbody></table></div></section><partial name="~/Views/Shared/Reportes/_ModalReporte.cshtml" /></main>
+@section Scripts { <script src="/js/reportes-parametrizados.js?v=20260720" defer></script> }

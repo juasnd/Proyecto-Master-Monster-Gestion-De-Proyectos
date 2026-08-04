@@ -1,0 +1,135 @@
+@using PROYECTO_MONGO_DOTNET.Models
+@inject PROYECTO_MONGO_DOTNET.Services.UsuarioDAO UsuarioDao
+@{
+    var usuario = Context.Session.GetString("usuarioLogueado") ?? "";
+    var usuarioNombre = Context.Session.GetString("usuarioNombre") ?? usuario;
+    var perfilCodigo = Context.Session.GetString("perfilCodigo") ?? "";
+    var perfilNombre = Context.Session.GetString("perfilNombre") ?? "Perfil";
+    var menu = string.IsNullOrWhiteSpace(perfilCodigo) ? new List<MenuOpcion>() : UsuarioDao.ObtenerMenuUsuario(perfilCodigo);
+}
+@functions {
+    string RutaModulo(MenuOpcion opcion)
+    {
+        var ruta = (opcion.Url ?? "").Trim();
+        var query = ruta.IndexOf('?');
+        if (query >= 0) ruta = ruta[..query];
+        ruta = ruta.TrimStart('/');
+        return ruta.ToLowerInvariant() switch
+        {
+            "pagprincipal.jsp" => "",
+            "departamentos.jsp" => "DepartamentoController",
+            "cargos.jsp" => "CargoController",
+            "empleados.jsp" => "EmpleadoController",
+            "familiares.jsp" => "EmpleadoController",
+            "formacion.jsp" => "EmpleadoController",
+            "usuarios.jsp" => "UsuarioController",
+            "perfiles.jsp" => "PerfilController",
+            "permisos.jsp" => "PermisoController",
+            "asignarusuariosperfil.jsp" => "AsignacionUsuarioPerfilController",
+            "reportes.jsp" => "ReporteController",
+            _ => ruta
+        };
+    }
+
+    string RutaModuloEmbed(MenuOpcion opcion)
+    {
+        var modulo = RutaModulo(opcion);
+        if (string.IsNullOrWhiteSpace(modulo)) return "";
+        return "/" + modulo + (modulo.Contains('?') ? "&" : "?") + "embed=1";
+    }
+
+    void PintarNodo(MenuOpcion opcion, int nivel)
+    {
+        if ((opcion.Url ?? "").Trim().Equals("pagPrincipal.jsp", StringComparison.OrdinalIgnoreCase)) return;
+        var padding = 18 + nivel * 16;
+        if (opcion.Hijos.Any())
+        {
+            <li class="tree-item tree-parent nivel-@nivel">
+                <button type="button" class="tree-toggle" style="padding-left:@(padding)px">
+                    <span class="tree-arrow"></span>
+                    <span class="tree-text">@opcion.Descripcion</span>
+                </button>
+                <ul class="tree-children">
+                    @foreach (var hijo in opcion.Hijos) { PintarNodo(hijo, nivel + 1); }
+                </ul>
+            </li>
+        }
+        else
+        {
+            var modulo = RutaModulo(opcion);
+            var moduloEmbed = RutaModuloEmbed(opcion);
+            if (!string.IsNullOrWhiteSpace(modulo))
+            {
+                <li class="tree-item tree-leaf nivel-@nivel">
+                    <a href="/@modulo" class="tree-link" data-tab-url="@moduloEmbed" data-tab-title="@opcion.Descripcion" data-codigo="@opcion.Codigo" style="padding-left:@(padding)px">
+                        <span class="tree-leaf-dot"></span>
+                        <span class="tree-text">@opcion.Descripcion</span>
+                    </a>
+                </li>
+            }
+        }
+    }
+}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@ViewData["Title"] - Master Monster</title>
+    <link rel="icon" href="/img/favicon.png">
+    <link rel="stylesheet" href="/CSS/estilos.css" asp-append-version="true">
+</head>
+<body class="body-dashboard body-treeview">
+    <header class="topbar topbar-monster-simple">
+        <a class="topbar-logo-simple" href="/pagPrincipal.jsp" aria-label="Inicio Master Monster">
+            <img src="/img/Monsters-Inc.-Symbol.png" alt="Logo Master Monster">
+            <div class="topbar-brand-text">
+                <h1>Master Monster</h1>
+                <span>Sistema de gestión de proyectos</span>
+            </div>
+        </a>
+        <div class="topbar-gif-center">
+            <img src="/img/topbar.gif" alt="Animación Master Monster">
+        </div>
+        <div class="topbar-right-simple">
+            <div class="topbar-user-card-simple" title="@usuarioNombre - @perfilNombre">
+                <strong>@usuarioNombre</strong>
+                <small>@perfilNombre</small>
+            </div>
+            <a href="/Logout" class="btn-salir-simple">Cerrar sesión</a>
+        </div>
+    </header>
+
+    <div class="layout-treeview">
+        <aside class="sidebar-tree">
+            <div class="sidebar-tree-title">
+                <button type="button" id="btnSidebarInicio" class="sidebar-inicio-btn">INICIO</button>
+            </div>
+            <nav class="sidebar-nav">
+                <ul class="tree-root">
+                    @if (menu.Any())
+                    {
+                        foreach (var opcion in menu) { PintarNodo(opcion, 0); }
+                    }
+                    else
+                    {
+                        <li class="tree-empty">No hay opciones asignadas a este perfil.</li>
+                    }
+                </ul>
+            </nav>
+        </aside>
+        <main class="workspace-treeview">
+            <section id="panelInicio" class="panel-inicio-treeview">
+                @RenderBody()
+            </section>
+
+            <section id="panelModulo" class="panel-modulo-treeview" hidden>
+                <iframe id="frameModulo" class="frame-modulo-treeview" title="Contenido del modulo"></iframe>
+            </section>
+        </main>
+    </div>
+
+    <script src="/js/sidebar-tree.js"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

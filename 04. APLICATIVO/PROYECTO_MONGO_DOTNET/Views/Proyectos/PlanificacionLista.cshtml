@@ -1,0 +1,8 @@
+@model PROYECTO_MONGO_DOTNET.Models.ViewModels.ProyectosPaginaVm
+@{ ViewData["Title"] = "Planificación y seguimiento"; }
+<main class="crud-page" data-planificacion-lista>
+    <section class="crud-titulo proyectos-titulo"><div><h2>Planificación y seguimiento</h2><p>Seleccione un proyecto activo para abrir su espacio de trabajo contextual.</p></div><button type="button" class="btn-crud celeste" data-recargar-lista-plan>Recargar</button></section>
+    <section class="crud-contenedor"><div class="proyectos-filtros"><div class="grupo-campo campo-busqueda-proyecto"><label for="buscarPlanProyecto">Buscar proyecto</label><input id="buscarPlanProyecto" type="search" data-buscar-plan placeholder="Nombre, jefe o departamento"></div></div><div class="tabla-contenedor tabla-clara"><table class="tabla-crud"><thead><tr><th>Proyecto</th><th>Jefe</th><th>Fechas</th><th>Estado</th><th>Avance</th><th>Acción</th></tr></thead><tbody data-lista-plan><tr><td colspan="6" class="tabla-vacia">Cargando proyectos...</td></tr></tbody></table></div></section>
+    <div class="toast-contenedor" aria-live="polite" data-toast-contenedor></div>
+</main>
+@section Scripts { <script src="/js/proyecto-modales.js" asp-append-version="true" defer></script><script src="/js/planificacion-proyecto.js" asp-append-version="true" defer></script> }

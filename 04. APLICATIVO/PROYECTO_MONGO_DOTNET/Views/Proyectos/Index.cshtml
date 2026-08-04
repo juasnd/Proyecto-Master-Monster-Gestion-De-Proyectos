@@ -1,0 +1,63 @@
+@model PROYECTO_MONGO_DOTNET.Models.ViewModels.ProyectosPaginaVm
+@{
+    ViewData["Title"] = "Gestión de proyectos";
+    ViewData["ReporteEndpoint"] = "/api/v1/proyectos/reporte";
+    ViewData["ReporteTitulo"] = "Reporte de proyectos";
+    ViewData["ReporteArchivo"] = "reporte_proyectos";
+    ViewData["ReporteCodigo"] = "RPRO";
+    ViewData["ReporteModulo"] = "Proyectos - Gestión de proyectos";
+    ViewData["ReporteTipo"] = "PROYECTOS";
+    ViewData["DepartamentosReporte"] = Model.Departamentos;
+    ViewData["JefesReporte"] = Model.JefesProyecto;
+}
+<main class="crud-page proyectos-gestion" data-proyectos-gestion
+      data-puede-crear="@Model.PuedeCrear.ToString().ToLowerInvariant()"
+      data-puede-editar="@Model.PuedeEditar.ToString().ToLowerInvariant()"
+      data-puede-inactivar="@Model.PuedeInactivar.ToString().ToLowerInvariant()"
+      data-puede-equipo="@Model.PuedeGestionarEquipo.ToString().ToLowerInvariant()"
+      data-puede-planificar="@Model.PuedePlanificar.ToString().ToLowerInvariant()"
+      data-puede-estado="@Model.PuedeCambiarEstado.ToString().ToLowerInvariant()"
+      data-puede-finalizar="@Model.PuedeFinalizar.ToString().ToLowerInvariant()">
+    <form class="csrf-token" hidden>@Html.AntiForgeryToken()</form>
+    <section class="crud-titulo proyectos-titulo">
+        <div><h2>Gestión de proyectos</h2><p>Cree, consulte y administre cada proyecto directamente desde su fila.</p></div>
+        <div class="proyectos-titulo-acciones">
+            @if (Model.PuedeCrear) { <button type="button" class="btn-crud verde" data-nuevo-proyecto>Nuevo proyecto</button> }
+            <button type="button" class="btn-crud celeste" data-recargar-proyectos>Recargar</button>
+            @if (Model.PuedeReportar) { <button type="button" class="btn-crud reporte" data-reporte-abrir>Reportes</button> }
+        </div>
+    </section>
+
+    <section class="crud-contenedor proyectos-panel-listado">
+        <div class="proyectos-filtros" role="search">
+            <div class="grupo-campo campo-busqueda-proyecto"><label for="buscarProyecto">Buscar</label><input id="buscarProyecto" type="search" data-filtro-texto placeholder="Nombre, jefe o departamento"></div>
+            <div class="grupo-campo"><label for="filtroEstadoProyecto">Estado</label><select id="filtroEstadoProyecto" data-filtro-estado><option value="">Todos</option><option value="PLANIFICADO">Planificado</option><option value="EN_CURSO">En curso</option><option value="PAUSADO">Pausado</option><option value="FINALIZADO">Finalizado</option><option value="CANCELADO">Cancelado</option></select></div>
+            <div class="grupo-campo"><label for="filtroPrioridadProyecto">Prioridad</label><select id="filtroPrioridadProyecto" data-filtro-prioridad><option value="">Todas</option><option value="BAJA">Baja</option><option value="MEDIA">Media</option><option value="ALTA">Alta</option><option value="CRITICA">Crítica</option></select></div>
+            <div class="grupo-campo"><label for="filtroDepartamentoProyecto">Departamento</label><select id="filtroDepartamentoProyecto" data-filtro-departamento><option value="">Todos</option>@foreach (var d in Model.Departamentos) { <option value="@d.Codigo">@d.Descripcion</option> }</select></div>
+            <label class="filtro-check"><input type="checkbox" data-incluir-inactivos> Mostrar inactivos</label>
+        </div>
+        <div class="tabla-contenedor tabla-clara proyectos-tabla-scroll">
+            <table class="tabla-crud proyectos-tabla" data-tabla-proyectos>
+                <thead><tr><th>Nombre</th><th>Departamento</th><th>Jefe del proyecto</th><th>Fecha inicial</th><th>Fin planificado</th><th>Estado</th><th>Prioridad</th><th>Avance</th><th>Acciones</th></tr></thead>
+                <tbody><tr><td colspan="9" class="tabla-vacia">Cargando proyectos...</td></tr></tbody>
+            </table>
+        </div>
+        <footer class="paginacion-proyectos"><span data-resumen-paginacion></span><div><button type="button" class="btn-crud celeste" data-pagina-anterior>Anterior</button><button type="button" class="btn-crud celeste" data-pagina-siguiente>Siguiente</button></div></footer>
+    </section>
+
+    <partial name="~/Views/Proyectos/_ModalProyecto.cshtml" />
+    <partial name="~/Views/Proyectos/_ModalDetalleProyecto.cshtml" />
+    <partial name="~/Views/Proyectos/_ModalEquipo.cshtml" />
+    <partial name="~/Views/Proyectos/_ModalAsignacion.cshtml" />
+    <partial name="~/Views/Proyectos/_ModalCambioEstado.cshtml" />
+    <partial name="~/Views/Proyectos/_ModalCierre.cshtml" />
+    <dialog class="proyecto-modal proyecto-modal-sm" data-modal-confirmacion><div class="proyecto-modal-contenido"><header><div><small>Confirmación</small><h3 data-confirmacion-titulo>Confirmar operación</h3></div><button type="button" class="modal-cerrar" data-cerrar-modal aria-label="Cerrar">×</button></header><div class="proyecto-modal-cuerpo"><p data-confirmacion-mensaje></p></div><footer><button type="button" class="btn-crud celeste" data-cerrar-modal>Volver</button><button type="button" class="btn-crud" data-confirmar-operacion>Confirmar</button></footer></div></dialog>
+    <div class="toast-contenedor" aria-live="polite" aria-atomic="true" data-toast-contenedor></div>
+    @if (Model.PuedeReportar) { <partial name="~/Views/Shared/Reportes/_ModalReporte.cshtml" /> }
+</main>
+@section Scripts {
+    <script src="/js/proyecto-modales.js" asp-append-version="true" defer></script>
+    <script src="/js/equipo-proyecto.js" asp-append-version="true" defer></script>
+    <script src="/js/proyectos.js" asp-append-version="true" defer></script>
+    <script src="/js/reportes-parametrizados.js" asp-append-version="true" defer></script>
+}

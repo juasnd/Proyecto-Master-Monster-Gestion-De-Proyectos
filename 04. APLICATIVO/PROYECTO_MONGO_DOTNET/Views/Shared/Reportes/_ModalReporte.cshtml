@@ -1,0 +1,18 @@
+@{
+    var endpoint = ViewData["ReporteEndpoint"]?.ToString() ?? "/api/v1/proyectos/reporte";
+    var titulo = ViewData["ReporteTitulo"]?.ToString() ?? "Reporte parametrizado";
+    var archivo = ViewData["ReporteArchivo"]?.ToString() ?? "reporte";
+    var codigoReporte = ViewData["ReporteCodigo"]?.ToString() ?? "";
+    var modulo = ViewData["ReporteModulo"]?.ToString() ?? titulo;
+    var usuario = Context.Session.GetString("usuarioNombre") ?? Context.Session.GetString("usuarioLogueado") ?? "Usuario";
+}
+<dialog class="reporte-modal" data-reporte-modal data-endpoint="@endpoint" data-archivo="@archivo" data-titulo="@titulo" data-codigo-reporte="@codigoReporte" data-modulo="@modulo" data-usuario="@usuario">
+    <form method="dialog" data-reporte-form>
+        <div class="reporte-panel-header"><div><h3>@titulo</h3><p>Sin filtros se genera el listado general.</p></div></div>
+        <partial name="~/Views/Shared/Reportes/_FiltrosComunes.cshtml" />
+        <partial name="~/Views/Shared/Reportes/_ResumenReporte.cshtml" />
+        <p class="mensaje-error-general" data-reporte-error hidden></p>
+        <partial name="~/Views/Shared/Reportes/_ResultadoReporte.cshtml" />
+        <partial name="~/Views/Shared/Reportes/_BotonesExportacion.cshtml" />
+    </form>
+</dialog>

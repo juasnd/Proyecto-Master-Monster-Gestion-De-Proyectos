@@ -1,0 +1,98 @@
+@model PermisosPaginaVm
+@{
+    ViewData["Title"] = "Opciones por Perfil";
+    var perfil = Model.PerfilSeleccionado;
+    var soloLectura = perfil?.Codigo == "ADMIN" || perfil?.EstaActivo == false;
+    var opciones = Model.Permisos.Where(x => x.Nivel != 9 && x.CodigoOpcion != "INICIO").ToList();
+    var codigos = opciones.Select(x => x.CodigoOpcion).ToHashSet(StringComparer.OrdinalIgnoreCase);
+    var subsistemas = opciones.Where(x => (string.IsNullOrWhiteSpace(x.CodigoPadre) || !codigos.Contains(x.CodigoPadre)) && opciones.Any(h => h.CodigoPadre.Equals(x.CodigoOpcion, StringComparison.OrdinalIgnoreCase))).OrderBy(x => x.Orden).ToList();
+}
+<main class="crud-page permisos-page permisos-matriz-page">
+    <section class="crud-titulo permisos-titulo">
+        <div><h2>Opciones por Perfil</h2><p>Activa o desactiva las opciones del menú que puede usar cada perfil del sistema.</p></div>
+    </section>
+    @if (Model.Mensaje == "guardado") { <p class="mensaje-exito-general">Permisos guardados correctamente.</p> }
+    @if (!string.IsNullOrWhiteSpace(Model.Error)) { <p class="mensaje-error-general">@Model.Error</p> }
+
+    <section class="crud-contenedor permisos-contenedor permisos-matriz-contenedor">
+        <div class="form-crud-box permisos-filtro-box">
+            <h3>Seleccionar perfil</h3>
+            <form action="/PermisoController" method="get" class="permisos-filtro-form">
+                <div class="grupo-campo">
+                    <label for="perfilCodigoFiltro">Perfil</label>
+                    <select id="perfilCodigoFiltro" name="perfilCodigo" required>
+                        <option value="">Seleccione...</option>
+                        @foreach (var item in Model.Perfiles)
+                        {
+                            <option value="@item.Codigo" selected="@(perfil?.Codigo == item.Codigo ? "selected" : null)">@item.Descripcion</option>
+                        }
+                    </select>
+                </div>
+                <button type="submit" class="btn-crud-form">Cargar</button>
+            </form>
+        </div>
+
+        @if (perfil != null)
+        {
+            @if (perfil.Codigo == "ADMIN") { <p class="campo-ayuda">El perfil ADMIN conserva acceso total; la matriz se muestra como referencia.</p> }
+            else if (!perfil.EstaActivo) { <p class="campo-ayuda">Activa el perfil antes de modificar sus opciones.</p> }
+            <form action="/PermisoController" method="post" class="permisos-form">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="PerfilCodigo" value="@perfil.Codigo">
+                <div class="crud-toolbar permisos-toolbar">
+                    <div class="crud-toolbar-left">
+                        @if (!soloLectura)
+                        {
+                            <button type="submit" class="btn-crud verde">Guardar permisos</button>
+                            <button type="button" class="btn-crud celeste" id="btnMarcarPermisos">Activar todos</button>
+                            <button type="button" class="btn-crud reporte" id="btnLimpiarPermisos">Desactivar todos</button>
+                        }
+                    </div>
+                </div>
+                <div class="permisos-sistemas-matriz">
+                    @foreach (var subsistema in subsistemas)
+                    {
+                        var hijos = opciones.Where(x => x.CodigoPadre.Equals(subsistema.CodigoOpcion, StringComparison.OrdinalIgnoreCase)).OrderBy(x => x.Orden).ToList();
+                        var grupos = hijos.Where(x => opciones.Any(h => h.CodigoPadre.Equals(x.CodigoOpcion, StringComparison.OrdinalIgnoreCase))).ToList();
+                        var directas = hijos.Except(grupos).ToList();
+                        <section class="matriz-sistema-card abierto">
+                            <div class="matriz-sistema-header">
+                                <button type="button" class="matriz-toggle matriz-toggle-sistema"><span class="matriz-flecha">▾</span><strong>@subsistema.DescripcionOpcion</strong></button>
+                                <label class="matriz-switch" title="Activar o desactivar subsistema"><input type="checkbox" name="opciones" class="matriz-sistema-check" value="@subsistema.CodigoOpcion" checked="@(subsistema.Ver ? "checked" : null)" disabled="@(soloLectura ? "disabled" : null)"><span class="matriz-slider"></span></label>
+                            </div>
+                            <div class="matriz-sistema-body">
+                                @foreach (var grupo in grupos)
+                                {
+                                    var finales = opciones.Where(x => x.CodigoPadre.Equals(grupo.CodigoOpcion, StringComparison.OrdinalIgnoreCase)).OrderBy(x => x.Orden).ToList();
+                                    <div class="matriz-grupo-card abierto">
+                                        <div class="matriz-grupo-header">
+                                            <button type="button" class="matriz-toggle matriz-toggle-grupo"><span class="matriz-flecha">▾</span><strong>@grupo.DescripcionOpcion</strong></button>
+                                            <label class="matriz-switch matriz-switch-sm"><input type="checkbox" name="opciones" class="matriz-grupo-check" value="@grupo.CodigoOpcion" checked="@(grupo.Ver ? "checked" : null)" disabled="@(soloLectura ? "disabled" : null)"><span class="matriz-slider"></span></label>
+                                        </div>
+                                        <div class="matriz-grupo-body">
+                                            @foreach (var opcion in finales)
+                                            {
+                                                <div class="matriz-opcion-row"><span class="matriz-opcion-nombre">@opcion.DescripcionOpcion</span><label class="matriz-switch matriz-switch-sm"><input type="checkbox" name="opciones" class="matriz-opcion-check" value="@opcion.CodigoOpcion" checked="@(opcion.Ver ? "checked" : null)" disabled="@(soloLectura ? "disabled" : null)"><span class="matriz-slider"></span></label></div>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                                @if (directas.Any())
+                                {
+                                    <div class="matriz-grupo-card abierto"><div class="matriz-grupo-header"><button type="button" class="matriz-toggle matriz-toggle-grupo"><span class="matriz-flecha">▾</span><strong>Opciones directas</strong></button></div><div class="matriz-grupo-body">
+                                    @foreach (var opcion in directas) { <div class="matriz-opcion-row"><span class="matriz-opcion-nombre">@opcion.DescripcionOpcion</span><label class="matriz-switch matriz-switch-sm"><input type="checkbox" name="opciones" class="matriz-opcion-check" value="@opcion.CodigoOpcion" checked="@(opcion.Ver ? "checked" : null)" disabled="@(soloLectura ? "disabled" : null)"><span class="matriz-slider"></span></label></div> }
+                                    </div></div>
+                                }
+                            </div>
+                        </section>
+                    }
+                </div>
+            </form>
+        }
+        else
+        {
+            <div class="permisos-empty">Selecciona un perfil y presiona <strong>Cargar</strong> para administrar sus opciones.</div>
+        }
+    </section>
+</main>
+@section Scripts { <script src="/js/permisos.js?v=20260720-java1" defer></script> }

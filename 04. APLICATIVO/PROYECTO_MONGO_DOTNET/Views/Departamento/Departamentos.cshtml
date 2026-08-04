@@ -1,0 +1,177 @@
+@model DepartamentosVm
+@{
+    ViewData["Title"] = "Departamentos";
+}
+<main class="crud-page">
+    <section class="crud-titulo">
+        <div>
+            <h2>Gestionar Departamentos</h2>
+            <p>Administra los departamentos registrados dentro del sistema.</p>
+        </div>
+    </section>
+
+    @if (Model.Mensaje == "guardado") { <p class="mensaje-exito-general">Departamento guardado correctamente.</p> }
+    else if (Model.Mensaje == "actualizado") { <p class="mensaje-exito-general">Departamento actualizado correctamente.</p> }
+    else if (Model.Mensaje == "eliminado") { <p class="mensaje-exito-general">Departamento eliminado correctamente.</p> }
+
+    @if (Model.Error == "en_uso")
+    {
+        <p class="mensaje-error-general">No se puede eliminar el departamento porque esta relacionado con cargos, proyectos o empleados.</p>
+    }
+    else if (Model.Error == "no_eliminado" || Model.Mensaje == "no_eliminado")
+    {
+        <p class="mensaje-error-general">No se pudo eliminar el departamento.</p>
+    }
+    else if (Model.Error == "no_encontrado")
+    {
+        <p class="mensaje-error-general">No se encontro el departamento solicitado.</p>
+    }
+    else if (!string.IsNullOrWhiteSpace(Model.Error))
+    {
+        <p class="mensaje-error-general">@Model.Error</p>
+    }
+
+    <section class="crud-contenedor">
+        <div class="crud-toolbar">
+            <div class="crud-toolbar-left">
+                <a href="/DepartamentoController?accion=nuevo" class="btn-crud verde">Nuevo departamento</a>
+                <a href="/DepartamentoController" class="btn-crud celeste">Recargar</a>
+                @if (Model.PuedeReporteDepartamentos)
+                {
+                    <button type="button" class="btn-crud reporte" data-reporte-toggle="reporteDepartamentos">Reportes</button>
+                }
+            </div>
+
+            <div class="buscar-registros">
+                <label for="buscarDepartamento">Buscar:</label>
+                <input type="text" id="buscarDepartamento" placeholder="Buscar departamento...">
+            </div>
+        </div>
+
+        @if (Model.PuedeReporteDepartamentos)
+        {
+            <section id="reporteDepartamentos"
+                     class="reporte-panel"
+                     data-reporte-panel
+                     data-reporte-tabla="tablaDepartamentos"
+                     data-reporte-columnas="0,1"
+                     data-reporte-encabezados="Codigo|Descripcion"
+                     data-reporte-titulo="Reporte de Departamentos"
+                     data-reporte-archivo="reporte_departamentos"
+                     data-reporte-codigo="RDE"
+                     data-reporte-modulo="Departamentos"
+                     data-reporte-registro-url="/ReporteController"
+                     hidden>
+                <div class="reporte-panel-header">
+                    <div>
+                        <h3>Reportes de Departamentos</h3>
+                        <p>Tabla generada con la informacion visible del modulo.</p>
+                    </div>
+                    <div class="reporte-meta">
+                        <span>Registros: <strong data-reporte-total>0</strong></span>
+                        <span>Fecha: <strong data-reporte-fecha></strong></span>
+                    </div>
+                </div>
+
+                <div class="reporte-acciones">
+                    <button type="button" class="btn-crud reporte" data-reporte-accion="pdf">PDF</button>
+                    <button type="button" class="btn-crud reporte" data-reporte-accion="excel">Excel</button>
+                    <button type="button" class="btn-crud reporte" data-reporte-accion="csv">CSV</button>
+                </div>
+
+                <div class="tabla-contenedor tabla-clara reporte-preview">
+                    <table class="tabla-crud" data-reporte-preview>
+                        <thead></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </section>
+        }
+
+        @if (Model.Modo == "nuevo")
+        {
+            <div class="form-crud-box">
+                <h3>Crear departamento</h3>
+                <form action="/DepartamentoController" method="post" class="form-crud-lineal">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="accion" value="guardar">
+                    <div class="grupo-campo">
+                        <label for="descripcion">Nombre del departamento</label>
+                        <input type="text" id="descripcion" name="descripcion" maxlength="50" placeholder="Ej: Administracion" required>
+                    </div>
+                    <button type="submit" class="btn-crud-form">Guardar</button>
+                </form>
+            </div>
+        }
+
+        @if (Model.Modo == "editar" && Model.DepartamentoEditar != null)
+        {
+            <div class="form-crud-box">
+                <h3>Editar departamento</h3>
+                <form action="/DepartamentoController" method="post" class="form-crud-lineal">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="accion" value="actualizar">
+                    <input type="hidden" name="codigo" value="@Model.DepartamentoEditar.Codigo">
+                    <div class="grupo-campo">
+                        <label for="descripcion">Nombre del departamento</label>
+                        <input type="text" id="descripcion" name="descripcion" maxlength="50" value="@Model.DepartamentoEditar.Descripcion" required>
+                    </div>
+                    <button type="submit" class="btn-crud-form">Actualizar</button>
+                </form>
+            </div>
+        }
+
+        @if (Model.Modo == "ver" && Model.DepartamentoVer != null)
+        {
+            <div class="form-crud-box">
+                <h3>Detalle del departamento</h3>
+                <div class="detalle-crud">
+                    <p><strong>Codigo:</strong> @Model.DepartamentoVer.Codigo</p>
+                    <p><strong>Descripcion:</strong> @Model.DepartamentoVer.Descripcion</p>
+                </div>
+            </div>
+        }
+
+        <div class="tabla-contenedor tabla-clara">
+            <table class="tabla-crud" id="tablaDepartamentos" data-paginacion="true" data-paginacion-tamanio="3">
+                <thead>
+                    <tr>
+                        <th>Codigo</th>
+                        <th>Descripcion</th>
+                        <th>Operaciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @if (Model.Departamentos.Any())
+                {
+                    foreach (var dep in Model.Departamentos)
+                    {
+                        <tr>
+                            <td>@dep.Codigo</td>
+                            <td>@dep.Descripcion</td>
+                            <td>
+                                <div class="acciones-tabla">
+                                    <a class="btn-accion-icono accion-ver" href="/DepartamentoController?accion=ver&codigo=@dep.Codigo" title="Ver" aria-label="Ver"><img src="/img/iconos_master_monster/ver.png" alt=""></a>
+                                    <a class="btn-accion-icono accion-editar" href="/DepartamentoController?accion=editar&codigo=@dep.Codigo" title="Editar" aria-label="Editar"><img src="/img/iconos_master_monster/editar.png" alt=""></a>
+                                    <a class="btn-accion-icono accion-eliminar" href="/DepartamentoController?accion=eliminar&codigo=@dep.Codigo" title="Eliminar" aria-label="Eliminar" onclick="return confirm('Seguro que desea eliminar este departamento?');"><img src="/img/iconos_master_monster/eliminar.png" alt=""></a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr><td colspan="3" class="tabla-vacia">No existen departamentos registrados.</td></tr>
+                }
+                </tbody>
+            </table>
+        </div>
+        <div class="tabla-footer"></div>
+    </section>
+</main>
+
+@section Scripts {
+    <script src="/js/departamentos.js?v=20260707-sync1" defer></script>
+    <script src="/js/paginacion.js?v=20260707-sync1" defer></script>
+    <script src="/js/reportes.js?v=20260707-sync1" defer></script>
+}

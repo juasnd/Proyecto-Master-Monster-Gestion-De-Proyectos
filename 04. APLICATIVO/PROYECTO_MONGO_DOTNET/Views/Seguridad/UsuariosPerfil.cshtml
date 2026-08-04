@@ -1,0 +1,52 @@
+@model UsuariosPerfilPaginaVm
+@{
+    ViewData["Title"] = "Asignar usuarios a perfil";
+    string Iniciales(UsuarioPerfilProcesoVm x) => string.Concat(x.Nombres.Take(1)) + string.Concat(x.Apellidos.Take(1));
+}
+<main class="crud-page asignacion-usuario-page">
+    <section class="crud-titulo asignacion-usuario-titulo"><div><h2>Asignar usuarios a perfil</h2><p>Selecciona un perfil y administra sus usuarios mediante los dos listados.</p></div></section>
+    @if (Model.Mensaje == "asignados") { <p class="mensaje-exito-general">Los usuarios seleccionados fueron asignados correctamente.</p> }
+    else if (Model.Mensaje == "asignados_todos") { <p class="mensaje-exito-general">Todos los usuarios disponibles fueron asignados correctamente.</p> }
+    else if (Model.Mensaje == "retirados") { <p class="mensaje-exito-general">Los usuarios seleccionados fueron retirados correctamente.</p> }
+    else if (Model.Mensaje == "retirados_todos") { <p class="mensaje-exito-general">Todos los usuarios fueron retirados del perfil.</p> }
+    @if (!string.IsNullOrWhiteSpace(Model.Error)) { <p class="mensaje-error-general">@Model.Error</p> }
+    <section class="crud-contenedor asignacion-usuario-panel">
+        <form id="formSeleccionPerfil" action="/AsignacionUsuarioPerfilController" method="get" class="asignacion-perfil-form">
+            <label for="perfilCodigo">Perfil</label>
+            <select id="perfilCodigo" name="perfilCodigo" required><option value="">Seleccione un perfil...</option>@foreach (var p in Model.Perfiles) { <option value="@p.Codigo" selected="@(Model.PerfilSeleccionado?.Codigo == p.Codigo ? "selected" : null)">@p.Descripcion</option> }</select>
+        </form>
+        @if (Model.PerfilSeleccionado != null)
+        {
+            <form id="formAsignacionUsuarios" action="/AsignacionUsuarioPerfilController" method="post" class="asignacion-listas-form">
+                @Html.AntiForgeryToken()<input type="hidden" name="perfilCodigo" value="@Model.PerfilSeleccionado.Codigo">
+                <div class="asignacion-listas-grid">
+                    <section class="asignacion-lista-columna">
+                        <div class="asignacion-lista-encabezado"><label>Usuarios disponibles</label><span>@Model.UsuariosDisponibles.Count</span></div>
+                        <input type="search" id="buscarDisponibles" class="asignacion-buscador" placeholder="Buscar usuario..." autocomplete="off">
+                        <div id="usuariosDisponibles" class="asignacion-listbox" data-input-name="usuariosDisponibles" role="listbox" aria-multiselectable="true">
+                            @foreach (var u in Model.UsuariosDisponibles) { <div class="asignacion-usuario-item" data-login="@u.Login" data-search="@u.NombreCompleto @u.Login @u.PerfilDescripcion" draggable="true" tabindex="0" role="option" aria-selected="false"><span class="asignacion-usuario-icono">@Iniciales(u)</span><span class="asignacion-usuario-texto"><strong class="asignacion-usuario-nombre">@u.NombreCompleto</strong><small class="asignacion-usuario-detalle">@u.Login | @u.PerfilDescripcion</small></span></div> }
+                            @if (!Model.UsuariosDisponibles.Any()) { <div class="asignacion-listbox-vacia">No hay usuarios disponibles.</div> }
+                        </div><p class="asignacion-ayuda-arrastre">Selecciona, usa doble clic o arrastra usuarios.</p>
+                    </section>
+                    <div class="asignacion-botones" aria-label="Acciones de asignación">
+                        <button type="button" class="asignacion-boton" data-accion="asignarSeleccionados" data-origen="usuariosDisponibles" title="Asignar seleccionados">&gt;</button>
+                        <button type="button" class="asignacion-boton" data-accion="asignarTodos" title="Asignar todos">&gt;&gt;</button>
+                        <button type="button" class="asignacion-boton" data-accion="retirarSeleccionados" data-origen="usuariosAsignados" title="Retirar seleccionados">&lt;</button>
+                        <button type="button" class="asignacion-boton" data-accion="retirarTodos" title="Retirar todos">&lt;&lt;</button>
+                    </div>
+                    <section class="asignacion-lista-columna">
+                        <div class="asignacion-lista-encabezado"><label>Usuarios asignados</label><span>@Model.UsuariosAsignados.Count</span></div>
+                        <input type="search" id="buscarAsignados" class="asignacion-buscador" placeholder="Buscar usuario..." autocomplete="off">
+                        <div id="usuariosAsignados" class="asignacion-listbox" data-input-name="usuariosAsignados" role="listbox" aria-multiselectable="true">
+                            @foreach (var u in Model.UsuariosAsignados) { <div class="asignacion-usuario-item" data-login="@u.Login" data-search="@u.NombreCompleto @u.Login" draggable="true" tabindex="0" role="option" aria-selected="false"><span class="asignacion-usuario-icono">@Iniciales(u)</span><span class="asignacion-usuario-texto"><strong class="asignacion-usuario-nombre">@u.NombreCompleto</strong><small class="asignacion-usuario-detalle">@u.Login</small></span></div> }
+                            @if (!Model.UsuariosAsignados.Any()) { <div class="asignacion-listbox-vacia">Este perfil no tiene usuarios asignados.</div> }
+                        </div><p class="asignacion-ayuda-arrastre">Los cambios conservan el historial de asignación.</p>
+                    </section>
+                </div>
+            </form>
+            <p id="avisoSeleccion" class="asignacion-aviso" hidden>Selecciona al menos un usuario para realizar esta acción.</p>
+        }
+        else { <div class="asignacion-estado-inicial">Selecciona un perfil para cargar los usuarios disponibles y asignados.</div> }
+    </section>
+</main>
+@section Scripts { <script src="/js/asignar-usuarios-perfil.js?v=20260720-java1" defer></script> }

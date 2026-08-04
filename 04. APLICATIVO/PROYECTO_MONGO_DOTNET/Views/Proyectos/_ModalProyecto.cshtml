@@ -1,0 +1,19 @@
+@model PROYECTO_MONGO_DOTNET.Models.ViewModels.ProyectosPaginaVm
+<dialog class="proyecto-modal" data-modal-proyecto>
+    <form class="proyecto-modal-contenido" data-form-proyecto novalidate>
+        <header><div><small>Gestión de proyectos</small><h3 data-titulo-modal-proyecto>Nuevo proyecto</h3><p>Complete los datos principales. El estado Planificado se asigna automáticamente.</p></div><button type="button" class="modal-cerrar" data-cerrar-modal aria-label="Cerrar">×</button></header>
+        <div class="proyecto-modal-cuerpo proyecto-form-grid">
+            <input type="hidden" name="codigo">
+            <div class="grupo-campo"><label for="proyectoNombre">Nombre <span aria-hidden="true">*</span></label><input id="proyectoNombre" name="nombre" maxlength="150" required autofocus><span class="campo-error" data-error="nombre"></span></div>
+            <div class="grupo-campo"><label for="proyectoDepartamento">Departamento <span aria-hidden="true">*</span></label><select id="proyectoDepartamento" name="codigoDepartamento" required><option value="">Seleccione...</option>@foreach (var d in Model.Departamentos) { <option value="@d.Codigo">@d.Descripcion</option> }</select><span class="campo-error" data-error="codigoDepartamento"></span></div>
+            <div class="grupo-campo"><label for="proyectoJefe">Jefe del proyecto <span aria-hidden="true">*</span></label><select id="proyectoJefe" name="codigoJefeProyecto" required><option value="">Seleccione un jefe designado...</option>@foreach (var e in Model.JefesProyecto) { <option value="@e.PeempCodigo">@e.Persona.Nombres @e.Persona.Apellidos</option> }</select><small>Solo se muestran empleados activos, con usuario activo y cargo habilitado como jefe.</small><span class="campo-error" data-error="codigoJefeProyecto"></span></div>
+            <div class="grupo-campo"><label for="proyectoPrioridad">Prioridad</label><select id="proyectoPrioridad" name="prioridad"><option value="BAJA">Baja</option><option value="MEDIA" selected>Media</option><option value="ALTA">Alta</option><option value="CRITICA">Crítica</option></select><span class="campo-error" data-error="prioridad"></span></div>
+            <div class="grupo-campo"><label for="proyectoInicio">Fecha inicial <span aria-hidden="true">*</span></label><input id="proyectoInicio" name="fechaInicio" type="date" required><span class="campo-error" data-error="fechaInicio"></span></div>
+            <div class="grupo-campo"><label for="proyectoFin">Fecha final planificada <span aria-hidden="true">*</span></label><input id="proyectoFin" name="fechaFinPlanificada" type="date" required><span class="campo-error" data-error="fechaFinPlanificada"></span></div>
+            <div class="grupo-campo"><label for="proyectoPresupuesto">Presupuesto (USD)</label><input id="proyectoPresupuesto" name="presupuesto" type="number" min="0" step="0.01" value="0"><span class="campo-error" data-error="presupuesto"></span></div>
+            <div class="grupo-campo campo-ancho"><label for="proyectoDescripcion">Descripción</label><textarea id="proyectoDescripcion" name="descripcion" maxlength="1000" rows="3"></textarea><span class="campo-error" data-error="descripcion"></span></div>
+            <div class="grupo-campo campo-ancho"><label for="proyectoObservacion">Observación</label><textarea id="proyectoObservacion" name="observacion" maxlength="1000" rows="2"></textarea><span class="campo-error" data-error="observacion"></span></div>
+        </div>
+        <footer><button type="button" class="btn-crud celeste" data-cerrar-modal>Cancelar</button><button type="submit" class="btn-crud verde" data-guardar-proyecto>Guardar proyecto</button></footer>
+    </form>
+</dialog>

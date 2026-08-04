@@ -1,0 +1,4 @@
+@{
+    var esIframe = string.Equals(Context.Request.Headers["Sec-Fetch-Dest"], "iframe", StringComparison.OrdinalIgnoreCase);
+    Layout = Context.Request.Query["embed"] == "1" || esIframe ? "_ModuleLayout" : "_Layout";
+}

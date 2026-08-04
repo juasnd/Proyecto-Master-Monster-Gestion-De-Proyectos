@@ -1,0 +1,127 @@
+@model ReportesVm
+@{
+    ViewData["Title"] = "Reportes";
+
+    static string Texto(string? valor, string alterno)
+    {
+        return string.IsNullOrWhiteSpace(valor) ? alterno : valor.Trim();
+    }
+
+    static string RutaRegenerar(string codigoReporte)
+    {
+        return codigoReporte.ToUpperInvariant() switch
+        {
+            "RDE" => "DepartamentoController",
+            "RCA" => "CargoController",
+            "REM" => "EmpleadoController",
+            "RUS" => "UsuarioController",
+            "RPF" => "PerfilController",
+            _ => "ReporteController"
+        };
+    }
+}
+<main class="crud-page reportes-page">
+    <section class="crud-titulo">
+        <div>
+            <h2>Reportes</h2>
+            <p>Historico de reportes generados en los modulos del sistema.</p>
+        </div>
+    </section>
+
+    @if (Model.Mensaje == "eliminado") { <p class="mensaje-exito-general">Registro de historial eliminado correctamente.</p> }
+    else if (Model.Mensaje == "no_eliminado") { <p class="mensaje-error-general">No se pudo eliminar el registro del historial.</p> }
+
+    <section class="crud-contenedor">
+        <div class="crud-toolbar">
+            <div class="crud-toolbar-left">
+                <a href="/ReporteController" class="btn-crud celeste">Recargar</a>
+            </div>
+
+            <div class="buscar-registros">
+                <label for="buscarReporteHistorial">Buscar:</label>
+                <input type="text" id="buscarReporteHistorial" placeholder="Fecha, usuario, perfil, modulo o formato...">
+            </div>
+        </div>
+
+        @if (Model.Detalle != null)
+        {
+            <div class="form-crud-box reporte-historial-detalle">
+                <h3>Detalle del reporte</h3>
+                <div class="detalle-crud reporte-detalle-grid">
+                    <p><strong>Fecha:</strong> @Texto(Model.Detalle.Fecha, "Sin fecha")</p>
+                    <p><strong>Usuario:</strong> @Texto(Model.Detalle.Usuario, "Sin usuario")</p>
+                    <p><strong>Perfil:</strong> @Texto(Model.Detalle.Perfil, "Sin perfil")</p>
+                    <p><strong>Modulo:</strong> @Texto(Model.Detalle.Modulo, "Sin modulo")</p>
+                    <p><strong>Tipo:</strong> @Texto(Model.Detalle.TipoReporte, "Reporte")</p>
+                    <p><strong>Formato:</strong> @Texto(Model.Detalle.Formato, "Sin formato")</p>
+                    <p><strong>Total registros:</strong> @Model.Detalle.TotalRegistros</p>
+                    <p class="detalle-wide"><strong>Filtros usados:</strong> @Texto(Model.Detalle.Filtros, "Sin filtros")</p>
+                </div>
+            </div>
+        }
+
+        <div class="tabla-contenedor tabla-clara">
+            <table class="tabla-crud" id="tablaHistorialReportes" data-paginacion="true" data-paginacion-tamanio="6">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Usuario</th>
+                        <th>Perfil</th>
+                        <th>Modulo</th>
+                        <th>Tipo de reporte</th>
+                        <th>Formato</th>
+                        <th>Total</th>
+                        <th>Filtros usados</th>
+                        <th>Accion</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @if (Model.Historial.Any())
+                {
+                    foreach (var reporte in Model.Historial)
+                    {
+                        <tr>
+                            <td>@Texto(reporte.Fecha, "Sin fecha")</td>
+                            <td>@Texto(reporte.Usuario, "Sin usuario")</td>
+                            <td>@Texto(reporte.Perfil, "Sin perfil")</td>
+                            <td>@Texto(reporte.Modulo, "Sin modulo")</td>
+                            <td>@Texto(reporte.TipoReporte, "Reporte")</td>
+                            <td>@Texto(reporte.Formato, "Sin formato")</td>
+                            <td>@reporte.TotalRegistros</td>
+                            <td>@Texto(reporte.Filtros, "Sin filtros")</td>
+                            <td>
+                                <div class="acciones-tabla acciones-reportes">
+                                    @if (!string.IsNullOrWhiteSpace(reporte.Codigo))
+                                    {
+                                        <a class="btn-accion-icono accion-ver" href="/ReporteController?accion=detalle&codigo=@reporte.Codigo" title="Ver detalle" aria-label="Ver detalle"><img src="/img/iconos_master_monster/ver.png" alt=""></a>
+                                    }
+                                    <a class="btn-accion-texto accion-editar" href="/@RutaRegenerar(reporte.CodigoReporte)">Regenerar</a>
+                                    @if (!string.IsNullOrWhiteSpace(reporte.Codigo))
+                                    {
+                                        <form action="/ReporteController" method="post" class="form-eliminar-historial">
+                                            <input type="hidden" name="accion" value="eliminar">
+                                            <input type="hidden" name="codigo" value="@reporte.Codigo">
+                                            <button type="submit" class="btn-accion-icono accion-eliminar" title="Eliminar historial" aria-label="Eliminar historial" onclick="return confirm('Seguro que desea eliminar este registro del historial?');">
+                                                <img src="/img/iconos_master_monster/eliminar.png" alt="">
+                                            </button>
+                                        </form>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr><td colspan="9" class="tabla-vacia">No existen reportes registrados en el historial.</td></tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+
+@section Scripts {
+    <script src="/js/paginacion.js" defer></script>
+    <script src="/js/reportes-historial.js" defer></script>
+}

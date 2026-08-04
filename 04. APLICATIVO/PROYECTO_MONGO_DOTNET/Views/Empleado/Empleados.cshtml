@@ -1,0 +1,562 @@
+@using System.Text.Json
+@model EmpleadosVm
+@{
+    ViewData["Title"] = "Empleados";
+    var emp = Model.EmpleadoForm ?? new Empleado();
+    var persona = emp.Persona ?? new Persona();
+    var familiares = emp.Familiares ?? new List<Familiar>();
+    var formaciones = emp.Formaciones ?? new List<Formacion>();
+    var formacion = formaciones.FirstOrDefault() ?? new Formacion();
+    var lectura = Model.Modo == "ver";
+    var edicion = Model.Modo == "editar";
+    var nuevo = Model.Modo == "nuevo";
+    var mostrarFormulario = nuevo || edicion;
+    var mostrarModalVer = lectura;
+    var tituloFormulario = edicion ? "Editar empleado" : "Anadir empleado";
+    var fotoActual = persona.Foto ?? "";
+    var tieneFotoActual = !string.IsNullOrWhiteSpace(fotoActual);
+    var familiaresJson = JsonSerializer.Serialize(familiares.Select(f => new
+    {
+        codigo = f.Codigo,
+        codigoParentesco = f.CodigoParentesco,
+        descripcionParentesco = f.DescripcionParentesco,
+        nombre = f.Nombre,
+        apellido = f.Apellido,
+        fechaNacimiento = f.FechaNacimiento,
+        telefono = f.Telefono,
+        cargaFamiliar = string.IsNullOrWhiteSpace(f.CargaFamiliar) ? "S" : f.CargaFamiliar,
+        observacion = f.Observacion
+    }));
+}
+@functions {
+    static string Edad(string fechaNacimiento)
+    {
+        if (!DateOnly.TryParse(fechaNacimiento, out var fecha)) return "";
+        var hoy = DateOnly.FromDateTime(DateTime.Today);
+        var edad = hoy.Year - fecha.Year;
+        if (fecha > hoy.AddYears(-edad)) edad--;
+        return edad.ToString();
+    }
+}
+
+<main class="crud-page empleado-page">
+    <section class="crud-titulo">
+        <div>
+            <h2>Gestion de Empleados</h2>
+            <p>Administra la ficha personal, cargo y departamento de cada empleado.</p>
+        </div>
+    </section>
+
+    @if (Model.Mensaje == "guardado") { <p class="mensaje-exito-general">Empleado guardado correctamente.</p> }
+    else if (Model.Mensaje == "actualizado") { <p class="mensaje-exito-general">Empleado actualizado correctamente.</p> }
+    else if (Model.Mensaje == "eliminado") { <p class="mensaje-exito-general">Empleado eliminado correctamente.</p> }
+
+    @if (!string.IsNullOrWhiteSpace(Model.Error))
+    {
+        <p class="mensaje-error-general">@Model.Error</p>
+    }
+
+    <section class="crud-contenedor empleados-panel">
+        <form class="empleado-busqueda" action="/EmpleadoController" method="get">
+            <input type="hidden" name="accion" value="buscar">
+            <div class="grupo-campo">
+                <label for="criterioBusqueda">Criterio</label>
+                <select id="criterioBusqueda" name="criterioBusqueda">
+                    <option value="codigo" selected="@(Model.CriterioBusqueda == "codigo")">Codigo empleado</option>
+                    <option value="nombres" selected="@(Model.CriterioBusqueda == "nombres")">Nombres</option>
+                    <option value="apellidos" selected="@(Model.CriterioBusqueda == "apellidos")">Apellidos</option>
+                    <option value="cedula" selected="@(Model.CriterioBusqueda == "cedula")">Cedula</option>
+                </select>
+            </div>
+
+            <div class="grupo-campo busqueda-input">
+                <label for="terminoBusqueda">Busqueda</label>
+                <input type="text" id="terminoBusqueda" name="terminoBusqueda" value="@Model.TerminoBusqueda" placeholder="Buscar empleado...">
+            </div>
+
+            <div class="busqueda-acciones">
+                <button type="submit" class="btn-crud-form">Buscar</button>
+                <a href="/EmpleadoController" class="btn-crud celeste">Mostrar todos</a>
+                @if (Model.PuedeReporteEmpleados)
+                {
+                    <button type="button" class="btn-crud reporte" data-reporte-toggle="reporteEmpleados">Reportes</button>
+                }
+            </div>
+        </form>
+
+        @if (Model.PuedeReporteEmpleados)
+        {
+            <section id="reporteEmpleados"
+                     class="reporte-panel"
+                     data-reporte-panel
+                     data-reporte-tabla="tablaEmpleados"
+                     data-reporte-columnas="0,1,2,3,4"
+                     data-reporte-encabezados="Nombre completo|Celular|Correo|Departamento|Cargo"
+                     data-reporte-titulo="Reporte de Empleados"
+                     data-reporte-archivo="reporte_empleados"
+                     data-reporte-codigo="REM"
+                     data-reporte-modulo="Empleados"
+                     data-reporte-registro-url="/ReporteController"
+                     hidden>
+                <div class="reporte-panel-header">
+                    <div>
+                        <h3>Reportes de Empleados</h3>
+                        <p>Tabla generada con la informacion visible del modulo.</p>
+                    </div>
+                    <div class="reporte-meta">
+                        <span>Registros: <strong data-reporte-total>0</strong></span>
+                        <span>Fecha: <strong data-reporte-fecha></strong></span>
+                    </div>
+                </div>
+
+                <div class="reporte-acciones">
+                    <button type="button" class="btn-crud reporte" data-reporte-accion="pdf">PDF</button>
+                    <button type="button" class="btn-crud reporte" data-reporte-accion="excel">Excel</button>
+                    <button type="button" class="btn-crud reporte" data-reporte-accion="csv">CSV</button>
+                </div>
+
+                <div class="tabla-contenedor tabla-clara reporte-preview">
+                    <table class="tabla-crud" data-reporte-preview>
+                        <thead></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </section>
+        }
+
+        <div class="tabla-contenedor tabla-clara tabla-empleados">
+            <table class="tabla-crud" id="tablaEmpleados" data-paginacion="true" data-paginacion-tamanio="3">
+                <thead>
+                    <tr>
+                        <th>Nombre completo</th>
+                        <th>Celular</th>
+                        <th>Correo</th>
+                        <th>Departamento</th>
+                        <th>Cargo</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @if (Model.Empleados.Any())
+                {
+                    foreach (var item in Model.Empleados)
+                    {
+                        var p = item.Persona ?? new Persona();
+                        <tr data-codigo="@item.PeempCodigo"
+                            data-nombres="@p.Nombres"
+                            data-apellidos="@p.Apellidos"
+                            data-cedula="@p.Cedula">
+                            <td class="empleado-col-nombre"><strong>@p.Nombres @p.Apellidos</strong></td>
+                            <td>@p.Celular</td>
+                            <td>@p.Email</td>
+                            <td>@item.NombreDepartamento</td>
+                            <td>@item.NombreCargo</td>
+                            <td>
+                                <div class="acciones-tabla">
+                                    <a class="btn-accion-icono accion-editar" href="/EmpleadoController?accion=editar&codigo=@item.PeempCodigo" title="Editar" aria-label="Editar"><img src="/img/iconos_master_monster/editar.png" alt=""></a>
+                                    <a class="btn-accion-icono accion-ver" href="/EmpleadoController?accion=ver&codigo=@item.PeempCodigo" title="Ver" aria-label="Ver"><img src="/img/iconos_master_monster/ver.png" alt=""></a>
+                                    <a class="btn-accion-icono accion-eliminar" href="/EmpleadoController?accion=eliminar&codigo=@item.PeempCodigo" title="Eliminar" aria-label="Eliminar" onclick="return confirm('Seguro que desea eliminar este empleado?');"><img src="/img/iconos_master_monster/eliminar.png" alt=""></a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr><td colspan="6" class="tabla-vacia">No existen empleados registrados.</td></tr>
+                }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="empleado-add-row">
+            <button type="button" id="btnMostrarFormularioEmpleado" class="btn-crud verde">Añadir empleado</button>
+        </div>
+
+        <section id="panelFormularioEmpleado"
+                 class="panel-empleado-form @(mostrarFormulario ? "abierto" : "")"
+                 data-modo="@Model.Modo"
+                 role="dialog"
+                 aria-modal="true"
+                 aria-labelledby="tituloFormularioEmpleado"
+                 hidden="@(!mostrarFormulario)">
+            <form id="formEmpleado"
+                  action="/EmpleadoController"
+                  method="post"
+                  enctype="multipart/form-data"
+                  data-tabs-scope
+                  novalidate>
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="accionEmpleado" name="accion" value="@(edicion ? "actualizar" : "guardar")">
+                <input type="hidden" id="codigoPersona" name="codigoPersona" value="@persona.PeperCodigo">
+                <input type="hidden" id="codigoEmpleado" name="codigoEmpleado" value="@emp.PeempCodigo">
+                <input type="hidden" id="fotoActual" name="fotoActual" value="@fotoActual">
+                <input type="hidden" id="cargasFamiliares" name="cargasFamiliares" value="@persona.CargasFamiliares">
+                <input type="hidden" id="familiaresJson" name="familiaresJson" value="@familiaresJson">
+
+                <button type="button" id="btnCerrarFormularioEmpleado" class="empleado-modal-cerrar" aria-label="Cerrar formulario" title="Cerrar">&times;</button>
+
+                <div class="empleado-form-header">
+                    <div class="empleado-modal-identidad">
+                        <div class="foto-empleado">
+                            <div class="foto-marco foto-marco-preview @(tieneFotoActual ? "con-foto" : "")">
+                                <img id="previewFotoEmpleado" src="@(tieneFotoActual ? "/" + fotoActual : "")" alt="Foto del empleado" hidden="@(!tieneFotoActual)">
+                                <span id="textoSinFoto" hidden="@tieneFotoActual">Sin foto</span>
+                            </div>
+                            <label for="fotoEmpleado" class="foto-upload-label">Seleccionar foto</label>
+                            <input type="file" id="fotoEmpleado" name="fotoEmpleado" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+                            <small class="field-error-message" data-error-for="fotoEmpleado"></small>
+                        </div>
+                        <div>
+                            <h3 id="tituloFormularioEmpleado">@tituloFormulario</h3>
+                            <p>Los codigos se generan automaticamente al guardar.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tabs-empleado" role="tablist" aria-label="Secciones de empleado">
+                    <button type="button" class="tab-empleado activo" data-tab="datosGenerales">Datos Generales</button>
+                    <button type="button" class="tab-empleado" data-tab="formacion">Formacion</button>
+                    <button type="button" class="tab-empleado" data-tab="familia">Informacion Familiar</button>
+                </div>
+
+                <section class="tab-panel activo" id="datosGenerales">
+                    <div class="form-grid-empleado">
+                        <div class="grupo-campo">
+                            <label for="nombres">Nombres</label>
+                            <input type="text" id="nombres" name="nombres" value="@persona.Nombres" maxlength="30" required>
+                            <small class="field-error-message" data-error-for="nombres"></small>
+                        </div>
+                        <div class="grupo-campo">
+                            <label for="apellidos">Apellidos</label>
+                            <input type="text" id="apellidos" name="apellidos" value="@persona.Apellidos" maxlength="30" required>
+                            <small class="field-error-message" data-error-for="apellidos"></small>
+                        </div>
+                        <div class="grupo-campo">
+                            <label for="cedula">Cedula</label>
+                            <input type="text" id="cedula" name="cedula" value="@persona.Cedula" maxlength="10" required>
+                            <small class="field-error-message" data-error-for="cedula"></small>
+                        </div>
+                        <div class="grupo-campo">
+                            <label for="fechaNacimiento">Fecha nacimiento</label>
+                            <input type="date" id="fechaNacimiento" name="fechaNacimiento" value="@persona.FechaNacimiento" required>
+                            <small class="field-error-message" data-error-for="fechaNacimiento"></small>
+                        </div>
+                        <div class="grupo-campo">
+                            <label for="sexoCodigo">Sexo</label>
+                            <select id="sexoCodigo" name="sexoCodigo" required>
+                                <option value="">Seleccione...</option>
+                                @foreach (var sexo in Model.Sexos)
+                                {
+                                    <option value="@sexo.Codigo" selected="@(sexo.Codigo == persona.PesexCodigo)">@sexo.Descripcion</option>
+                                }
+                            </select>
+                            <small class="field-error-message" data-error-for="sexoCodigo"></small>
+                        </div>
+                        <div class="grupo-campo">
+                            <label for="estadoCivilCodigo">Estado civil</label>
+                            <select id="estadoCivilCodigo" name="estadoCivilCodigo">
+                                <option value="">Seleccione...</option>
+                                @foreach (var estado in Model.EstadosCiviles)
+                                {
+                                    <option value="@estado.Codigo" selected="@(estado.Codigo == persona.PeescCodigo)">@estado.Descripcion</option>
+                                }
+                            </select>
+                            <small class="field-error-message" data-error-for="estadoCivilCodigo"></small>
+                        </div>
+                        <div class="grupo-campo">
+                            <label for="departamentoCodigo">Departamento</label>
+                            <select id="departamentoCodigo" name="departamentoCodigo" required>
+                                <option value="">Seleccione...</option>
+                                @foreach (var dep in Model.Departamentos)
+                                {
+                                    <option value="@dep.Codigo" selected="@(dep.Codigo == emp.PedepCodigo)">@dep.Descripcion</option>
+                                }
+                            </select>
+                            <small class="field-error-message" data-error-for="departamentoCodigo"></small>
+                        </div>
+                        <div class="grupo-campo">
+                            <label for="cargoCodigo">Cargo</label>
+                            <select id="cargoCodigo" name="cargoCodigo" data-selected="@emp.PecarCodigo" required>
+                                <option value="">Seleccione...</option>
+                                @foreach (var cargo in Model.Cargos)
+                                {
+                                    <option value="@cargo.PecarCodigo" data-departamento="@cargo.PedepCodigo" selected="@(cargo.PecarCodigo == emp.PecarCodigo && cargo.PedepCodigo == emp.PedepCodigo)">@cargo.PecarDescri</option>
+                                }
+                            </select>
+                            <small class="field-error-message" data-error-for="cargoCodigo"></small>
+                        </div>
+                        <div class="grupo-campo campo-wide">
+                            <label for="direccion">Direccion</label>
+                            <input type="text" id="direccion" name="direccion" value="@persona.Direccion" maxlength="100" required>
+                            <small class="field-error-message" data-error-for="direccion"></small>
+                        </div>
+                        <div class="grupo-campo">
+                            <label for="celular">Celular</label>
+                            <input type="text" id="celular" name="celular" value="@persona.Celular" maxlength="10">
+                            <small class="field-error-message" data-error-for="celular"></small>
+                        </div>
+                        <div class="grupo-campo">
+                            <label for="telefonoDomicilio">Telefono domicilio</label>
+                            <input type="text" id="telefonoDomicilio" name="telefonoDomicilio" value="@persona.TelefonoDomicilio" maxlength="10">
+                            <small class="field-error-message" data-error-for="telefonoDomicilio"></small>
+                        </div>
+                        <div class="grupo-campo campo-wide">
+                            <label for="email">Email</label>
+                            <input type="email" id="email" name="email" value="@persona.Email" maxlength="100" required>
+                            <small class="field-error-message" data-error-for="email"></small>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="tab-panel" id="formacion">
+                    <div class="form-grid-empleado">
+                        <div class="grupo-campo">
+                            <label for="formacionNivel">Nivel de formacion</label>
+                            <input type="text" id="formacionNivel" name="formacionNivel" value="@formacion.Nivel">
+                            <small class="field-error-message" data-error-for="formacionNivel"></small>
+                        </div>
+                        <div class="grupo-campo">
+                            <label for="formacionTitulo">Titulo obtenido</label>
+                            <input type="text" id="formacionTitulo" name="formacionTitulo" value="@formacion.Titulo">
+                            <small class="field-error-message" data-error-for="formacionTitulo"></small>
+                        </div>
+                        <div class="grupo-campo">
+                            <label for="formacionInstitucion">Institucion</label>
+                            <input type="text" id="formacionInstitucion" name="formacionInstitucion" value="@formacion.Institucion">
+                            <small class="field-error-message" data-error-for="formacionInstitucion"></small>
+                        </div>
+                        <div class="grupo-campo">
+                            <label for="formacionInicio">Fecha inicio</label>
+                            <input type="date" id="formacionInicio" name="formacionInicio" value="@formacion.FechaInicio">
+                            <small class="field-error-message" data-error-for="formacionInicio"></small>
+                        </div>
+                        <div class="grupo-campo">
+                            <label for="formacionFin">Fecha de finalizacion</label>
+                            <input type="date" id="formacionFin" name="formacionFin" value="@formacion.FechaFin">
+                            <small class="field-error-message" data-error-for="formacionFin"></small>
+                        </div>
+                        <div class="grupo-campo campo-wide">
+                            <label for="formacionObservacion">Observacion</label>
+                            <input type="text" id="formacionObservacion" name="formacionObservacion" value="@formacion.Observacion">
+                            <small class="field-error-message" data-error-for="formacionObservacion"></small>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="tab-panel" id="familia">
+                    <div class="form-grid-empleado">
+                        <div class="grupo-campo">
+                            <label for="familiarNombres">Nombres del familiar</label>
+                            <input type="text" id="familiarNombres" maxlength="30">
+                            <small class="field-error-message" data-error-for="familiarNombres"></small>
+                        </div>
+                        <div class="grupo-campo">
+                            <label for="familiarApellidos">Apellidos del familiar</label>
+                            <input type="text" id="familiarApellidos" maxlength="30">
+                            <small class="field-error-message" data-error-for="familiarApellidos"></small>
+                        </div>
+                        <div class="grupo-campo">
+                            <label for="familiarParentesco">Parentesco</label>
+                            <select id="familiarParentesco">
+                                <option value="">Seleccione...</option>
+                                @foreach (var parentesco in Model.Parentescos)
+                                {
+                                    <option value="@parentesco.Codigo">@parentesco.Descripcion</option>
+                                }
+                            </select>
+                            <small class="field-error-message" data-error-for="familiarParentesco"></small>
+                        </div>
+                        <div class="grupo-campo">
+                            <label for="familiarFechaNacimiento">Fecha de nacimiento</label>
+                            <input type="date" id="familiarFechaNacimiento">
+                            <small class="field-error-message" data-error-for="familiarFechaNacimiento"></small>
+                        </div>
+                        <div class="grupo-campo">
+                            <label for="familiarTelefono">Telefono</label>
+                            <input type="text" id="familiarTelefono" maxlength="10">
+                            <small class="field-error-message" data-error-for="familiarTelefono"></small>
+                        </div>
+                        <div class="grupo-campo campo-full">
+                            <label for="familiarObservacion">Observacion</label>
+                            <input type="text" id="familiarObservacion" maxlength="200">
+                            <small class="field-error-message" data-error-for="familiarObservacion"></small>
+                        </div>
+                    </div>
+
+                    <div class="familia-acciones">
+                        <button type="button" id="btnAgregarFamiliar" class="btn-crud celeste">Añadir familiar</button>
+                        <button type="button" id="btnCancelarEdicionFamiliar" class="btn-familiar-secundario" hidden>Cancelar edicion</button>
+                        <small class="field-error-message" data-error-for="familiares"></small>
+                    </div>
+
+                    <div class="tabla-contenedor tabla-clara tabla-familiar">
+                        <table class="tabla-crud tabla-familiar-compacta">
+                            <thead>
+                                <tr>
+                                    <th>Nombres</th>
+                                    <th>Apellidos</th>
+                                    <th>Parentesco</th>
+                                    <th>Fecha nacimiento</th>
+                                    <th>Telefono</th>
+                                    <th>Observacion</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tablaFamiliaresBody">
+                                <tr><td colspan="7" class="tabla-vacia">Sin familiares agregados.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <div class="empleado-modal-actions">
+                    <button type="button" id="btnCancelarFormulario" class="btn-ficha btn-cancelar">Cancelar</button>
+                    <button type="submit" id="btnSubmitEmpleado" class="btn-ficha btn-guardar">@(edicion ? "Actualizar" : "Guardar")</button>
+                </div>
+            </form>
+        </section>
+
+        @if (mostrarModalVer)
+        {
+            <div class="empleado-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="tituloModalEmpleado">
+                <section class="empleado-modal">
+                    <div class="empleado-modal-header">
+                        <div class="empleado-modal-identidad">
+                            <div class="empleado-foto-grande">
+                                @if (tieneFotoActual)
+                                {
+                                    <img src="/@fotoActual" alt="Foto del empleado">
+                                }
+                                else
+                                {
+                                    <span>Sin foto</span>
+                                }
+                            </div>
+                            <div>
+                                <h3 id="tituloModalEmpleado">@persona.Nombres @persona.Apellidos</h3>
+                                <p>@emp.PeempCodigo - @emp.NombreCargo</p>
+                            </div>
+                        </div>
+                        <a href="/EmpleadoController" class="empleado-modal-cerrar" aria-label="Cerrar detalle del empleado" title="Cerrar">&times;</a>
+                    </div>
+
+                    <div class="empleado-modal-body" data-tabs-scope>
+                        <div class="tabs-empleado modal-tabs-empleado" role="tablist" aria-label="Secciones de consulta del empleado">
+                            <button type="button" class="tab-empleado activo" data-tab="modalDatosGenerales">Datos Generales</button>
+                            <button type="button" class="tab-empleado" data-tab="modalFormacion">Formacion</button>
+                            <button type="button" class="tab-empleado" data-tab="modalFamilia">Informacion Familiar</button>
+                        </div>
+
+                        <section class="tab-panel activo detalle-empleado-bloque" id="modalDatosGenerales">
+                            <h4>Datos generales</h4>
+                            <div class="detalle-empleado-grid">
+                                <div><span>Codigo empleado</span><strong>@emp.PeempCodigo</strong></div>
+                                <div><span>Cedula</span><strong>@persona.Cedula</strong></div>
+                                <div><span>Nombres</span><strong>@persona.Nombres</strong></div>
+                                <div><span>Apellidos</span><strong>@persona.Apellidos</strong></div>
+                                <div><span>Fecha nacimiento</span><strong>@persona.FechaNacimiento</strong></div>
+                                <div><span>Edad</span><strong>@Edad(persona.FechaNacimiento)</strong></div>
+                                <div><span>Sexo</span><strong>@persona.SexoDescripcion</strong></div>
+                                <div><span>Estado civil</span><strong>@persona.EstadoCivilDescripcion</strong></div>
+                                <div><span>Cargas familiares</span><strong>@persona.CargasFamiliares</strong></div>
+                                <div class="detalle-wide"><span>Direccion</span><strong>@persona.Direccion</strong></div>
+                                <div><span>Celular</span><strong>@persona.Celular</strong></div>
+                                <div><span>Telefono domicilio</span><strong>@persona.TelefonoDomicilio</strong></div>
+                                <div class="detalle-wide"><span>Email</span><strong>@persona.Email</strong></div>
+                            </div>
+
+                            <h4 class="detalle-subtitulo">Datos laborales</h4>
+                            <div class="detalle-empleado-grid">
+                                <div><span>Departamento</span><strong>@emp.NombreDepartamento</strong></div>
+                                <div><span>Cargo</span><strong>@emp.NombreCargo</strong></div>
+                            </div>
+                        </section>
+
+                        <section class="tab-panel detalle-empleado-bloque" id="modalFormacion">
+                            <h4>Formacion academica</h4>
+                            <div class="tabla-contenedor tabla-clara tabla-formacion modal-formaciones">
+                                <table class="tabla-crud tabla-formacion-compacta">
+                                    <thead>
+                                        <tr>
+                                            <th>Nivel</th>
+                                            <th>Titulo</th>
+                                            <th>Institucion</th>
+                                            <th>Fecha inicio</th>
+                                            <th>Fecha fin</th>
+                                            <th>Observacion</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                    @if (formaciones.Any())
+                                    {
+                                        foreach (var item in formaciones)
+                                        {
+                                            <tr>
+                                                <td>@item.Nivel</td>
+                                                <td>@item.Titulo</td>
+                                                <td>@item.Institucion</td>
+                                                <td>@item.FechaInicio</td>
+                                                <td>@item.FechaFin</td>
+                                                <td>@item.Observacion</td>
+                                            </tr>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <tr><td colspan="6" class="tabla-vacia">No existe formacion registrada.</td></tr>
+                                    }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </section>
+
+                        <section class="tab-panel detalle-empleado-bloque" id="modalFamilia">
+                            <h4>Informacion familiar</h4>
+                            <div class="tabla-contenedor tabla-clara tabla-familiar modal-familiares">
+                                <table class="tabla-crud tabla-familiar-compacta">
+                                    <thead>
+                                        <tr>
+                                            <th>Nombres</th>
+                                            <th>Apellidos</th>
+                                            <th>Parentesco</th>
+                                            <th>Fecha nacimiento</th>
+                                            <th>Telefono</th>
+                                            <th>Observacion</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                    @if (familiares.Any())
+                                    {
+                                        foreach (var item in familiares)
+                                        {
+                                            <tr>
+                                                <td>@item.Nombre</td>
+                                                <td>@item.Apellido</td>
+                                                <td>@item.DescripcionParentesco</td>
+                                                <td>@item.FechaNacimiento</td>
+                                                <td>@item.Telefono</td>
+                                                <td>@item.Observacion</td>
+                                            </tr>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <tr><td colspan="6" class="tabla-vacia">No existen familiares registrados.</td></tr>
+                                    }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </section>
+                    </div>
+                </section>
+            </div>
+        }
+    </section>
+</main>
+
+@section Scripts {
+    <script src="/js/empleados.js?v=20260707-sync1" defer></script>
+    <script src="/js/paginacion.js?v=20260707-sync1" defer></script>
+    <script src="/js/reportes.js?v=20260707-sync1" defer></script>
+}

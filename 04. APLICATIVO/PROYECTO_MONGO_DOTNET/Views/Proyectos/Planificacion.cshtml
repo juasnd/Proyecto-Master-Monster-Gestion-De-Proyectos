@@ -1,0 +1,37 @@
+@model PROYECTO_MONGO_DOTNET.Models.ViewModels.ProyectosPaginaVm
+@{ ViewData["Title"] = "Planificación y seguimiento"; }
+<main class="crud-page planificacion-contextual" data-planificacion-proyecto data-codigo-proyecto="@Model.CodigoProyecto" data-nombre-jefe="@Model.NombreJefeProyecto"
+      data-puede-planificar="@Model.PuedePlanificar.ToString().ToLowerInvariant()"
+      data-puede-equipo="@Model.PuedeGestionarEquipo.ToString().ToLowerInvariant()"
+      data-puede-estado="@Model.PuedeCambiarEstado.ToString().ToLowerInvariant()"
+      data-puede-finalizar="@Model.PuedeFinalizar.ToString().ToLowerInvariant()">
+    <form class="csrf-token" hidden>@Html.AntiForgeryToken()</form>
+    <header class="proyecto-contexto-cabecera">
+        <a class="btn-crud celeste" href="/Proyectos">Volver a proyectos</a>
+        <div class="proyecto-contexto-identidad"><h2 data-contexto-nombre>Cargando proyecto...</h2><p data-contexto-fechas></p></div>
+        <div class="proyecto-contexto-datos" data-contexto-datos></div>
+        <div class="proyecto-contexto-acciones" data-contexto-acciones></div>
+    </header>
+    <nav class="planificacion-tabs" aria-label="Secciones de planificación">
+        <button type="button" class="activo" data-tab-plan="resumen">Resumen</button><button type="button" data-tab-plan="cronograma">Cronograma</button><button type="button" data-tab-plan="calendario">Calendario</button><button type="button" data-tab-plan="trabajo">Plan de trabajo</button><button type="button" data-tab-plan="equipo">Equipo</button>
+    </nav>
+    <section class="planificacion-panel" data-panel-plan="resumen"><partial name="~/Views/Proyectos/_ResumenProyecto.cshtml" /></section>
+    <section class="planificacion-panel" data-panel-plan="cronograma" hidden><partial name="~/Views/Proyectos/_CronogramaProyecto.cshtml" /></section>
+    <section class="planificacion-panel" data-panel-plan="calendario" hidden><partial name="~/Views/Proyectos/_CalendarioProyecto.cshtml" /></section>
+    <section class="planificacion-panel" data-panel-plan="trabajo" hidden><partial name="~/Views/Proyectos/_PlanTrabajoProyecto.cshtml" /></section>
+    <section class="planificacion-panel" data-panel-plan="equipo" hidden><partial name="~/Views/Proyectos/_EquipoProyecto.cshtml" /></section>
+    <partial name="~/Views/Proyectos/_ModalPlanTrabajo.cshtml" />
+    <partial name="~/Views/Proyectos/_ModalAsignacion.cshtml" />
+    <partial name="~/Views/Proyectos/_ModalCambioEstado.cshtml" />
+    <partial name="~/Views/Proyectos/_ModalCierre.cshtml" />
+    <dialog class="proyecto-modal" data-modal-elemento><div class="proyecto-modal-contenido"><header><div><small>Detalle de planificación</small><h3 data-elemento-titulo>Detalle</h3></div><button type="button" class="modal-cerrar" data-cerrar-modal aria-label="Cerrar">×</button></header><div class="proyecto-modal-cuerpo detalle-proyecto-grid" data-elemento-detalle></div><footer><button type="button" class="btn-crud celeste" data-cerrar-modal>Cerrar</button></footer></div></dialog>
+    <dialog class="proyecto-modal proyecto-modal-sm" data-modal-confirmacion><div class="proyecto-modal-contenido"><header><div><small>Confirmación</small><h3 data-confirmacion-titulo>Confirmar</h3></div><button type="button" class="modal-cerrar" data-cerrar-modal>×</button></header><div class="proyecto-modal-cuerpo"><p data-confirmacion-mensaje></p></div><footer><button type="button" class="btn-crud celeste" data-cerrar-modal>Volver</button><button type="button" class="btn-crud" data-confirmar-operacion>Confirmar</button></footer></div></dialog>
+    <div class="toast-contenedor" aria-live="polite" data-toast-contenedor></div>
+</main>
+@section Scripts {
+    <script src="/js/proyecto-modales.js" asp-append-version="true" defer></script>
+    <script src="/js/equipo-proyecto.js" asp-append-version="true" defer></script>
+    <script src="/js/cronograma-proyecto.js" asp-append-version="true" defer></script>
+    <script src="/js/calendario-proyecto.js" asp-append-version="true" defer></script>
+    <script src="/js/planificacion-proyecto.js" asp-append-version="true" defer></script>
+}

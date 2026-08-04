@@ -1,0 +1,200 @@
+@model CargosVm
+@{
+    ViewData["Title"] = "Cargos";
+}
+<main class="crud-page">
+    <section class="crud-titulo">
+        <div>
+            <h2>Gestionar Cargos</h2>
+            <p>Administra los cargos y asignales a los departamentos registrados.</p>
+        </div>
+    </section>
+
+    @if (Model.Mensaje == "guardado") { <p class="mensaje-exito-general">Cargo guardado correctamente.</p> }
+    else if (Model.Mensaje == "actualizado") { <p class="mensaje-exito-general">Cargo actualizado correctamente.</p> }
+    else if (Model.Mensaje == "eliminado") { <p class="mensaje-exito-general">Cargo eliminado correctamente.</p> }
+
+    @if (Model.Error == "en_uso")
+    {
+        <p class="mensaje-error-general">No se puede eliminar el cargo porque esta asignado a empleados.</p>
+    }
+    else if (Model.Error == "no_eliminado" || Model.Mensaje == "no_eliminado")
+    {
+        <p class="mensaje-error-general">No se pudo eliminar el cargo.</p>
+    }
+    else if (Model.Error == "no_encontrado")
+    {
+        <p class="mensaje-error-general">No se encontro el cargo solicitado.</p>
+    }
+    else if (!string.IsNullOrWhiteSpace(Model.Error))
+    {
+        <p class="mensaje-error-general">@Model.Error</p>
+    }
+
+    <section class="crud-contenedor">
+        <div class="crud-toolbar">
+            <div class="crud-toolbar-left">
+                <a href="/CargoController?accion=nuevo" class="btn-crud verde">Nuevo cargo</a>
+                <a href="/CargoController" class="btn-crud celeste">Recargar</a>
+                @if (Model.PuedeReporteCargos)
+                {
+                    <button type="button" class="btn-crud reporte" data-reporte-toggle="reporteCargos">Reportes</button>
+                }
+            </div>
+
+            <div class="buscar-registros">
+                <label for="buscarCargo">Buscar:</label>
+                <input type="text" id="buscarCargo" placeholder="Buscar cargo...">
+            </div>
+        </div>
+
+        @if (Model.PuedeReporteCargos)
+        {
+            <section id="reporteCargos"
+                     class="reporte-panel"
+                     data-reporte-panel
+                     data-reporte-tabla="tablaCargos"
+                     data-reporte-columnas="0,1,2"
+                     data-reporte-encabezados="Departamento|Cod. Cargo|Nombre del cargo"
+                     data-reporte-titulo="Reporte de Cargos"
+                     data-reporte-archivo="reporte_cargos"
+                     data-reporte-codigo="RCA"
+                     data-reporte-modulo="Cargos"
+                     data-reporte-registro-url="/ReporteController"
+                     hidden>
+                <div class="reporte-panel-header">
+                    <div>
+                        <h3>Reportes de Cargos</h3>
+                        <p>Tabla generada con la informacion visible del modulo.</p>
+                    </div>
+                    <div class="reporte-meta">
+                        <span>Registros: <strong data-reporte-total>0</strong></span>
+                        <span>Fecha: <strong data-reporte-fecha></strong></span>
+                    </div>
+                </div>
+
+                <div class="reporte-acciones">
+                    <button type="button" class="btn-crud reporte" data-reporte-accion="pdf">PDF</button>
+                    <button type="button" class="btn-crud reporte" data-reporte-accion="excel">Excel</button>
+                    <button type="button" class="btn-crud reporte" data-reporte-accion="csv">CSV</button>
+                </div>
+
+                <div class="tabla-contenedor tabla-clara reporte-preview">
+                    <table class="tabla-crud" data-reporte-preview>
+                        <thead></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </section>
+        }
+
+        @if (Model.Modo == "nuevo")
+        {
+            <div class="form-crud-box">
+                <h3>Crear cargo</h3>
+                <form action="/CargoController" method="post" class="form-crud-lineal">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="accion" value="guardar">
+                    <div class="grupo-campo">
+                        <label for="pedepCodigo">Departamento</label>
+                        <select id="pedepCodigo" name="pedepCodigo" required>
+                            <option value="">Seleccione un departamento...</option>
+                            @foreach (var dep in Model.Departamentos)
+                            {
+                                <option value="@dep.Codigo">@dep.Descripcion</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="grupo-campo">
+                        <label for="pecarDescri">Nombre del cargo</label>
+                        <input type="text" id="pecarDescri" name="pecarDescri" maxlength="50" placeholder="Ej: Gerente General" required>
+                    </div>
+                    <button type="submit" class="btn-crud-form">Guardar</button>
+                </form>
+            </div>
+        }
+
+        @if (Model.Modo == "editar" && Model.CargoEditar != null)
+        {
+            <div class="form-crud-box">
+                <h3>Editar cargo</h3>
+                <form action="/CargoController" method="post" class="form-crud-lineal">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="accion" value="actualizar">
+                    <input type="hidden" name="pedepCodigo" value="@Model.CargoEditar.PedepCodigo">
+                    <input type="hidden" name="pecarCodigo" value="@Model.CargoEditar.PecarCodigo">
+                    <div class="grupo-campo">
+                        <label for="departamentoVisible">Departamento</label>
+                        <select id="departamentoVisible" disabled>
+                            @foreach (var dep in Model.Departamentos)
+                            {
+                                <option value="@dep.Codigo" selected="@(dep.Codigo == Model.CargoEditar.PedepCodigo)">@dep.Descripcion</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="grupo-campo">
+                        <label for="pecarDescri">Nombre del cargo</label>
+                        <input type="text" id="pecarDescri" name="pecarDescri" maxlength="50" value="@Model.CargoEditar.PecarDescri" required>
+                    </div>
+                    <button type="submit" class="btn-crud-form">Actualizar</button>
+                </form>
+            </div>
+        }
+
+        @if (Model.Modo == "ver" && Model.CargoVer != null)
+        {
+            <div class="form-crud-box">
+                <h3>Detalle del cargo</h3>
+                <div class="detalle-crud">
+                    <p><strong>Departamento:</strong> @Model.CargoVer.NombreDepartamento (@Model.CargoVer.PedepCodigo)</p>
+                    <p><strong>Codigo del Cargo:</strong> @Model.CargoVer.PecarCodigo</p>
+                    <p><strong>Nombre del cargo:</strong> @Model.CargoVer.PecarDescri</p>
+                </div>
+            </div>
+        }
+
+        <div class="tabla-contenedor tabla-clara">
+            <table class="tabla-crud" id="tablaCargos" data-paginacion="true" data-paginacion-tamanio="3">
+                <thead>
+                    <tr>
+                        <th>Departamento</th>
+                        <th>Cod. Cargo</th>
+                        <th>Nombre del cargo</th>
+                        <th>Operaciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @if (Model.Cargos.Any())
+                {
+                    foreach (var cargo in Model.Cargos)
+                    {
+                        <tr>
+                            <td>@cargo.NombreDepartamento</td>
+                            <td>@cargo.PecarCodigo</td>
+                            <td>@cargo.PecarDescri</td>
+                            <td>
+                                <div class="acciones-tabla">
+                                    <a class="btn-accion-icono accion-ver" href="/CargoController?accion=ver&depCode=@cargo.PedepCodigo&carCode=@cargo.PecarCodigo" title="Ver" aria-label="Ver"><img src="/img/iconos_master_monster/ver.png" alt=""></a>
+                                    <a class="btn-accion-icono accion-editar" href="/CargoController?accion=editar&depCode=@cargo.PedepCodigo&carCode=@cargo.PecarCodigo" title="Editar" aria-label="Editar"><img src="/img/iconos_master_monster/editar.png" alt=""></a>
+                                    <a class="btn-accion-icono accion-eliminar" href="/CargoController?accion=eliminar&depCode=@cargo.PedepCodigo&carCode=@cargo.PecarCodigo" title="Eliminar" aria-label="Eliminar" onclick="return confirm('Seguro que desea eliminar este cargo?');"><img src="/img/iconos_master_monster/eliminar.png" alt=""></a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr><td colspan="4" class="tabla-vacia">No existen cargos registrados.</td></tr>
+                }
+                </tbody>
+            </table>
+        </div>
+        <div class="tabla-footer"></div>
+    </section>
+</main>
+
+@section Scripts {
+    <script src="/js/departamentos.js?v=20260720-integracion1" defer></script>
+    <script src="/js/paginacion.js?v=20260707-sync1" defer></script>
+    <script src="/js/reportes.js?v=20260707-sync1" defer></script>
+}
