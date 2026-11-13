@@ -99,6 +99,7 @@
                                     @if (!string.IsNullOrWhiteSpace(reporte.Codigo))
                                     {
                                         <form action="/ReporteController" method="post" class="form-eliminar-historial">
+                                            @Html.AntiForgeryToken()
                                             <input type="hidden" name="accion" value="eliminar">
                                             <input type="hidden" name="codigo" value="@reporte.Codigo">
                                             <button type="submit" class="btn-accion-icono accion-eliminar" title="Eliminar historial" aria-label="Eliminar historial" onclick="return confirm('Seguro que desea eliminar este registro del historial?');">

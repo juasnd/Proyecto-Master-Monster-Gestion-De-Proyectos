@@ -6,30 +6,27 @@ namespace PROYECTO_MONGO_DOTNET.Services.Finanzas;
 
 public sealed class CostoProyectoServicio
 {
-    private readonly IProyectoRepositorio _proyectos;
-    private readonly IPlanificacionProyectoRepositorio _planes;
-    private readonly MovimientoProyectoRepositorio _movimientos;
+    private readonly ICostoProyectoRepositorio _costos;
     private readonly ParametroFinancieroRepositorio _parametros;
 
-    public CostoProyectoServicio(IProyectoRepositorio proyectos, IPlanificacionProyectoRepositorio planes,
-        MovimientoProyectoRepositorio movimientos, ParametroFinancieroRepositorio parametros)
+    public CostoProyectoServicio(ICostoProyectoRepositorio costos, ParametroFinancieroRepositorio parametros)
     {
-        _proyectos = proyectos;
-        _planes = planes;
-        _movimientos = movimientos;
+        _costos = costos;
         _parametros = parametros;
     }
 
     public async Task<CostoProyectoResumen> CalcularAsync(string codigoProyecto)
     {
-        var proyecto = await _proyectos.ObtenerAsync(codigoProyecto) ?? throw ExcepcionNegocio.NoEncontrado("El proyecto no existe.");
-        var tareas = await _planes.TareasAsync(proyecto.Codigo);
-        var costoLaboralPlanificado = tareas.Sum(x => x.HorasPlanificadas * x.CostoHoraPlanificado);
-        var gastosAprobados = await _movimientos.GastosAprobadosAsync(proyecto.Codigo);
-        var costoComprometido = decimal.Round(costoLaboralPlanificado * proyecto.Avance / 100m + gastosAprobados, 2);
+        var proyecto = (await _costos.ConsultarAsync(codigoProyecto)).FirstOrDefault() ?? throw ExcepcionNegocio.NoEncontrado("El proyecto no existe.");
+        return Calcular(proyecto, await UmbralAsync());
+    }
+
+    public static CostoProyectoResumen Calcular(CostoProyectoFila proyecto, decimal alerta)
+    {
+        var costoLaboralPlanificado = proyecto.CostoLaboralPlanificado;
+        var gastosAprobados = proyecto.GastosAprobados;
+        var costoComprometido = decimal.Round(ReglasFinanzas.CostoTotal(costoLaboralPlanificado * proyecto.Avance / 100m, gastosAprobados), 2);
         var consumo = proyecto.Presupuesto <= 0 ? (costoComprometido > 0 ? 100 : 0) : decimal.Round(costoComprometido / proyecto.Presupuesto * 100, 2);
-        var parametro = await _parametros.ObtenerAsync("PORCENTAJE_ALERTA_PRESUPUESTO");
-        var alerta = parametro?.ValorDecimal ?? parametro?.ValorEntero ?? 80;
         return new CostoProyectoResumen
         {
             CodigoProyecto = proyecto.Codigo,
@@ -47,8 +44,14 @@ public sealed class CostoProyectoServicio
 
     public async Task<IReadOnlyCollection<CostoProyectoResumen>> ListarAsync()
     {
-        var resultado = new List<CostoProyectoResumen>();
-        foreach (var proyecto in await _proyectos.ListarAsync(true)) resultado.Add(await CalcularAsync(proyecto.Codigo));
-        return resultado;
+        var proyectos = await _costos.ConsultarAsync();
+        var alerta = await UmbralAsync();
+        return proyectos.Select(proyecto => Calcular(proyecto, alerta)).ToList();
+    }
+
+    private async Task<decimal> UmbralAsync()
+    {
+        var parametro = await _parametros.ObtenerAsync("PORCENTAJE_ALERTA_PRESUPUESTO");
+        return parametro?.ValorDecimal ?? parametro?.ValorEntero ?? 80;
     }
 }

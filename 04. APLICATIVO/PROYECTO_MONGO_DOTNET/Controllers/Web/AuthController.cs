@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using PROYECTO_MONGO_DOTNET.Services;
 
 namespace PROYECTO_MONGO_DOTNET.Controllers;
@@ -10,6 +11,7 @@ public class AuthController : Controller
 
     [HttpGet("/")]
     [HttpGet("/index.jsp")]
+    [AllowAnonymous]
     public IActionResult Index(string? error, string? num)
     {
         ViewBag.Error = error;
@@ -19,6 +21,7 @@ public class AuthController : Controller
 
     [HttpPost("/Controller")]
     [ValidateAntiForgeryToken]
+    [AllowAnonymous]
     public IActionResult Login(string usuario, string password)
     {
         var user = _usuarios.BuscarPorLogin(usuario);
@@ -32,6 +35,7 @@ public class AuthController : Controller
             _usuarios.ActualizarUltimoAcceso(user.Login);
             var nombre = _usuarios.ObtenerNombrePersona(user.CodigoPersona);
 
+            HttpContext.Session.Clear();
             HttpContext.Session.SetString("usuarioLogueado", user.Login);
             HttpContext.Session.SetString("usuarioNombre", string.IsNullOrWhiteSpace(nombre) ? user.Login : nombre);
             HttpContext.Session.SetString("perfilCodigo", user.Perfil?.Codigo ?? "");
@@ -48,7 +52,8 @@ public class AuthController : Controller
             : Redirect("/index.jsp?error=intentos&num=" + intentos);
     }
 
-    [HttpGet("/Logout")]
+    [HttpPost("/Logout")]
+    [ValidateAntiForgeryToken]
     public IActionResult Logout()
     {
         HttpContext.Session.Clear();

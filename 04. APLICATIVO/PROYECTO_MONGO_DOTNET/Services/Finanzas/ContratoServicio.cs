@@ -15,7 +15,7 @@ public sealed class ContratoServicio
 
     public async Task<Contrato> GuardarAsync(GuardarContratoDto dto, string usuario)
     {
-        if (_empleados.BuscarPorCodigo(dto.CodigoEmpleado) == null) throw new ExcepcionNegocio("El empleado no existe o no está activo.");
+        if (_empleados.BuscarActivoPorCodigo(dto.CodigoEmpleado) == null) throw new ExcepcionNegocio("El empleado no existe o no está activo.");
         if (dto.SueldoBase <= 0) throw new ExcepcionNegocio("El sueldo base debe ser mayor que cero.");
         if (dto.HorasMensuales <= 0) throw new ExcepcionNegocio("Las horas mensuales deben ser mayores que cero.");
         if (dto.FechaFin.HasValue && dto.FechaFin < dto.FechaInicio) throw new ExcepcionNegocio("La fecha final no puede ser anterior a la inicial.");
@@ -23,6 +23,7 @@ public sealed class ContratoServicio
         if (await _repositorio.HaySolapamientoAsync(dto.CodigoEmpleado, Utc(dto.FechaInicio), dto.FechaFin.HasValue ? Utc(dto.FechaFin.Value) : null, codigo))
             throw ExcepcionNegocio.Conflicto("El empleado ya tiene un contrato principal activo que se solapa con las fechas indicadas.");
         var existente = string.IsNullOrWhiteSpace(codigo) ? null : await _repositorio.ObtenerAsync(codigo);
+        if (!string.IsNullOrWhiteSpace(codigo) && existente == null) throw ExcepcionNegocio.NoEncontrado("El contrato no existe.");
         var contrato = existente ?? new Contrato { CodigoContrato = _codigos.GenerarCodigo("pecon_contrato", "CODIGOCONTRATO"), CreadoPor = usuario, FechaCreacion = DateTime.UtcNow };
         contrato.CodigoEmpleado = N(dto.CodigoEmpleado); contrato.TipoContrato = N(dto.TipoContrato); contrato.SueldoBase = dto.SueldoBase;
         contrato.HorasMensuales = dto.HorasMensuales; contrato.FechaInicio = Utc(dto.FechaInicio); contrato.FechaFin = dto.FechaFin.HasValue ? Utc(dto.FechaFin.Value) : null;

@@ -6,6 +6,12 @@ namespace PROYECTO_MONGO_DOTNET.Services.Proyectos;
 
 public static class ReglasProyecto
 {
+    public static bool PuedeCambiarEstado(string origen, string destino) => (origen, destino) switch
+    {
+        ("PLANIFICADO", "EN_CURSO") or ("EN_CURSO", "PAUSADO") or ("PAUSADO", "EN_CURSO") => true,
+        _ => false
+    };
+
     public static void Validar(GuardarProyectoDto dto)
     {
         var errores = new Dictionary<string, string[]>();

@@ -14,7 +14,7 @@ public sealed class ContratoRepositorio(SqlContexto db)
     private static string N(string? x)=>(x??"").Trim().ToUpperInvariant();
 }
 
-public sealed class CategoriaGastoRepositorio(SqlContexto db)
+public sealed class CategoriaGastoRepositorio(SqlContexto db) : ICategoriaGastoRepositorio
 {
     private const string C="Id,CodigoCategoria,Nombre,Descripcion,Activo,CreadoPor,FechaCreacion,ModificadoPor,FechaModificacion";
     public Task<List<CategoriaGasto>> ListarAsync()=>db.ConsultarAsync<CategoriaGasto>($"SELECT {C} FROM app.CategoriaGasto ORDER BY Nombre");
@@ -33,13 +33,14 @@ public sealed class ParametroFinancieroRepositorio(SqlContexto db)
     private static string N(string? x)=>(x??"").Trim().ToUpperInvariant();
 }
 
-public sealed class MovimientoProyectoRepositorio(SqlContexto db)
+public sealed class MovimientoProyectoRepositorio(SqlContexto db) : IMovimientoProyectoRepositorio
 {
     private const string C="Id,CodigoMovimiento,CodigoProyecto,Tipo,CodigoCategoria,Concepto,Valor,Fecha,Estado,RegistradoPor,FechaRegistro,AprobadoPor,FechaAprobacion,Observacion,ModificadoPor,FechaModificacion";
     public Task<List<MovimientoProyecto>> ListarAsync()=>db.ConsultarAsync<MovimientoProyecto>($"SELECT {C} FROM app.MovimientoProyecto ORDER BY Fecha DESC");
     public async Task<MovimientoProyecto?> ObtenerAsync(string c)=>(await db.ConsultarAsync<MovimientoProyecto>($"SELECT {C} FROM app.MovimientoProyecto WHERE CodigoMovimiento=@C",new{C=N(c)})).FirstOrDefault();
     public async Task CrearAsync(MovimientoProyecto x)=>await db.EjecutarAsync("INSERT app.MovimientoProyecto (Id,CodigoMovimiento,CodigoProyecto,Tipo,CodigoCategoria,Concepto,Valor,Fecha,Estado,RegistradoPor,FechaRegistro,AprobadoPor,FechaAprobacion,Observacion,ModificadoPor,FechaModificacion) VALUES (@Id,@CodigoMovimiento,@CodigoProyecto,@Tipo,@CodigoCategoria,@Concepto,@Valor,@Fecha,@Estado,@RegistradoPor,@FechaRegistro,@AprobadoPor,@FechaAprobacion,@Observacion,@ModificadoPor,@FechaModificacion)",x);
-    public async Task<bool> ActualizarAsync(MovimientoProyecto x)=>await db.EjecutarAsync("UPDATE app.MovimientoProyecto SET CodigoProyecto=@CodigoProyecto,Tipo=@Tipo,CodigoCategoria=@CodigoCategoria,Concepto=@Concepto,Valor=@Valor,Fecha=@Fecha,Estado=@Estado,RegistradoPor=@RegistradoPor,FechaRegistro=@FechaRegistro,AprobadoPor=@AprobadoPor,FechaAprobacion=@FechaAprobacion,Observacion=@Observacion,ModificadoPor=@ModificadoPor,FechaModificacion=@FechaModificacion WHERE CodigoMovimiento=@CodigoMovimiento",x)>0;
-    public async Task<decimal> GastosAprobadosAsync(string p)=>await db.EscalarAsync<decimal>("SELECT COALESCE(SUM(Valor),0) FROM app.MovimientoProyecto WHERE CodigoProyecto=@P AND Estado='APROBADO'",new{P=N(p)});
+    public async Task<bool> ActualizarAsync(MovimientoProyecto x)=>await db.EjecutarAsync("UPDATE app.MovimientoProyecto SET CodigoProyecto=@CodigoProyecto,Tipo=@Tipo,CodigoCategoria=@CodigoCategoria,Concepto=@Concepto,Valor=@Valor,Fecha=@Fecha,Estado=@Estado,RegistradoPor=@RegistradoPor,FechaRegistro=@FechaRegistro,AprobadoPor=@AprobadoPor,FechaAprobacion=@FechaAprobacion,Observacion=@Observacion,ModificadoPor=@ModificadoPor,FechaModificacion=@FechaModificacion WHERE CodigoMovimiento=@CodigoMovimiento AND Estado='PENDIENTE'",x)>0;
+    public async Task<bool> RevisarPendienteAsync(MovimientoProyecto x) => await db.EjecutarAsync("UPDATE app.MovimientoProyecto SET Estado=@Estado,AprobadoPor=@AprobadoPor,FechaAprobacion=@FechaAprobacion,Observacion=@Observacion WHERE CodigoMovimiento=@CodigoMovimiento AND Estado='PENDIENTE' AND ((FechaModificacion IS NULL AND @FechaModificacion IS NULL) OR FechaModificacion=@FechaModificacion)", x) > 0;
+    public async Task<decimal> GastosAprobadosAsync(string p)=>await db.EscalarAsync<decimal>("SELECT COALESCE(SUM(Valor),0) FROM app.MovimientoProyecto WHERE CodigoProyecto=@P AND Tipo='GASTO' AND Estado='APROBADO'",new{P=N(p)});
     private static string N(string? x)=>(x??"").Trim().ToUpperInvariant();
 }

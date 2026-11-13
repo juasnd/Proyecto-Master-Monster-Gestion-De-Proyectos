@@ -71,7 +71,7 @@ public sealed class PlanificacionProyectoServicio
             };
         }).ToList();
         var pesoTotal = tareas.Sum(t => t.Peso);
-        var avanceReal = decimal.Round(tareas.Sum(t => t.Peso * EstadosTarea.Factor(t.Estado)), 2);
+        var avanceReal = ReglasPlanificacion.AvanceReal(tareas);
         var avancePlanificado = decimal.Round(tareas.Sum(t => t.Peso * AvancePlanificado(t, hoy) / 100), 2);
         var indicadores = new IndicadoresPlanificacionProyecto
         {
@@ -310,7 +310,7 @@ public sealed class PlanificacionProyectoServicio
         };
         var existentes = (await _planes.DependenciasAsync(proyecto.Codigo)).Where(d => d.CodigoTarea != codigoTarea).ToList();
         var relaciones = existentes.Concat(nuevas).ToList();
-        if (TieneCiclo(relaciones)) throw ExcepcionNegocio.Conflicto("La relación crea un ciclo entre tareas. Revise las predecesoras seleccionadas.");
+        if (ReglasPlanificacion.TieneCiclo(relaciones)) throw ExcepcionNegocio.Conflicto("La relación crea un ciclo entre tareas. Revise las predecesoras seleccionadas.");
 
         foreach (var relacion in relaciones)
         {
@@ -332,22 +332,6 @@ public sealed class PlanificacionProyectoServicio
             "SF" => sucesora.FechaFin.Date >= predecesora.FechaInicio.Date.AddDays(desfase),
             _ => false
         };
-    }
-
-    private static bool TieneCiclo(IReadOnlyCollection<DependenciaTarea> dependencias)
-    {
-        var grafo = dependencias.GroupBy(d => d.CodigoTarea).ToDictionary(g => g.Key, g => g.Select(d => d.CodigoPredecesora).ToList());
-        var visitando = new HashSet<string>();
-        var visitadas = new HashSet<string>();
-        bool Visitar(string tarea)
-        {
-            if (visitando.Contains(tarea)) return true;
-            if (visitadas.Contains(tarea)) return false;
-            visitando.Add(tarea);
-            if (grafo.TryGetValue(tarea, out var anteriores) && anteriores.Any(Visitar)) return true;
-            visitando.Remove(tarea); visitadas.Add(tarea); return false;
-        }
-        return grafo.Keys.Any(Visitar);
     }
 
     private static bool DependenciaCumplidaParaEstado(DependenciaTarea dependencia, string estadoDestino, IReadOnlyDictionary<string, TareaProyecto> tareas)
@@ -423,7 +407,7 @@ public sealed class PlanificacionProyectoServicio
     }
     private async Task<decimal> RecalcularAsync(Proyecto p, string usuario, string observacion)
     {
-        var tareas = await _planes.TareasAsync(p.Codigo); var nuevo = decimal.Round(tareas.Sum(t => t.Peso * EstadosTarea.Factor(t.Estado)), 2);
+        var tareas = await _planes.TareasAsync(p.Codigo); var nuevo = ReglasPlanificacion.AvanceReal(tareas);
         if (nuevo == p.Avance) return nuevo;
         var anterior = p.Avance; var estadoAnterior = p.Estado; p.Avance = nuevo;
         p.ModificadoPor = usuario; p.FechaModificacion = DateTime.UtcNow; await _proyectos.ActualizarAsync(p);

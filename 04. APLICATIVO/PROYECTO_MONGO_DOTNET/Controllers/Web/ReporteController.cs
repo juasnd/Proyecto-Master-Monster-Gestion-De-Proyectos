@@ -27,6 +27,7 @@ public class ReporteController : AppController
     }
 
     [HttpPost]
+    [ValidateAntiForgeryToken]
     public IActionResult Post()
     {
         if (!SesionValida) return Unauthorized(new { ok = false, mensaje = "Sesion no valida." });
@@ -52,6 +53,10 @@ public class ReporteController : AppController
         }
         if (accion == "eliminar")
         {
+            var reporte = _reportes.Buscar(Valor(Request.Form, "codigo"));
+            if (reporte == null) return NotFound();
+            if (!_permisos.TienePermiso(PerfilSesion, reporte.CodigoReporte, PermisoAccion.Eliminar))
+                return StatusCode(StatusCodes.Status403Forbidden);
             var ok = _reportes.Eliminar(Valor(Request.Form, "codigo"));
             return Redirect("/ReporteController?mensaje=" + (ok ? "eliminado" : "no_eliminado"));
         }

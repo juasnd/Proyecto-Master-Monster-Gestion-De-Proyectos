@@ -18,6 +18,7 @@ public sealed class CatalogosFinancierosServicio
     {
         if (string.IsNullOrWhiteSpace(dto.Nombre)) throw new ExcepcionNegocio("El nombre de la categoría es obligatorio.");
         var existente = string.IsNullOrWhiteSpace(dto.CodigoCategoria) ? null : await _categorias.ObtenerAsync(dto.CodigoCategoria);
+        if (!string.IsNullOrWhiteSpace(dto.CodigoCategoria) && existente == null) throw ExcepcionNegocio.NoEncontrado("La categoría no existe.");
         var x = existente ?? new CategoriaGasto { CodigoCategoria = _codigos.GenerarCodigo("fin_categoria_gasto", "CODIGOCATEGORIA"), CreadoPor = usuario, FechaCreacion = DateTime.UtcNow };
         x.Nombre = N(dto.Nombre); x.Descripcion = dto.Descripcion.Trim(); x.Activo = dto.Activo;
         if (existente == null) await _categorias.CrearAsync(x); else { x.ModificadoPor = usuario; x.FechaModificacion = DateTime.UtcNow; await _categorias.ActualizarAsync(x); }

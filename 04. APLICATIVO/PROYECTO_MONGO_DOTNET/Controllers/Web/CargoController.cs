@@ -1,3 +1,4 @@
+using PROYECTO_MONGO_DOTNET.Services.Seguridad;
 using Microsoft.AspNetCore.Mvc;
 using PROYECTO_MONGO_DOTNET.Models;
 using PROYECTO_MONGO_DOTNET.Services;
@@ -5,6 +6,7 @@ using PROYECTO_MONGO_DOTNET.Services;
 namespace PROYECTO_MONGO_DOTNET.Controllers;
 
 [Route("CargoController")]
+[PermisoModulo("cargos.jsp")]
 public class CargoController : AppController
 {
     private readonly CargoDAO _cargos;
@@ -40,13 +42,18 @@ public class CargoController : AppController
             vm.Modo = vm.CargoVer == null ? "listar" : "ver";
             if (vm.CargoVer == null) vm.Error = "no_encontrado";
         }
-        if (accion == "eliminar" && depCode != null && carCode != null)
-        {
-            if (_cargos.EnUso(depCode, carCode)) return Redirect("/CargoController?error=en_uso");
-            return Redirect("/CargoController?mensaje=" + (_cargos.Eliminar(depCode, carCode) ? "eliminado" : "no_eliminado"));
-        }
+        if (accion == "eliminar") return StatusCode(StatusCodes.Status405MethodNotAllowed);
 
         return View("Cargos", vm);
+    }
+
+    [HttpPost("eliminar")]
+    [ValidateAntiForgeryToken]
+    public IActionResult Eliminar(string depCode, string carCode)
+    {
+        if (_cargos.EnUso(depCode, carCode)) return Redirect("/CargoController?error=en_uso");
+        return Redirect("/CargoController?mensaje=" + (_cargos.Eliminar(depCode, carCode) ? "eliminado" : "no_eliminado"));
+
     }
 
     [HttpPost]

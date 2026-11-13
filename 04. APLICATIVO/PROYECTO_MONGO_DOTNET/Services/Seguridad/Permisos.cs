@@ -11,9 +11,11 @@ public sealed class PermisoRequeridoAttribute : Attribute, IAsyncAuthorizationFi
 {
     private readonly string _opcion;
     private readonly PermisoAccion _accion;
-    public PermisoRequeridoAttribute(string opcion, PermisoAccion accion = PermisoAccion.Ver) { _opcion = opcion; _accion = accion; }
+    private readonly string? _campoCodigo;
+    public PermisoRequeridoAttribute(string opcion, PermisoAccion accion = PermisoAccion.Ver, string? campoCodigo = null)
+    { _opcion = opcion; _accion = accion; _campoCodigo = campoCodigo; }
 
-    public Task OnAuthorizationAsync(AuthorizationFilterContext context)
+    public async Task OnAuthorizationAsync(AuthorizationFilterContext context)
     {
         var sesion = context.HttpContext.Session;
         var usuario = sesion.GetString("usuarioLogueado");
@@ -22,18 +24,32 @@ public sealed class PermisoRequeridoAttribute : Attribute, IAsyncAuthorizationFi
             context.Result = EsApi(context.HttpContext)
                 ? new UnauthorizedObjectResult(ApiRespuesta<object>.Fallo("La sesión no es válida."))
                 : new RedirectResult("/index.jsp");
-            return Task.CompletedTask;
+            return;
         }
         var perfil = sesion.GetString("perfilCodigo") ?? "";
         var permisos = context.HttpContext.RequestServices.GetRequiredService<PermisoDAO>();
-        if (!permisos.TienePermiso(perfil, _opcion, _accion))
+        var accion = _accion;
+        if (_campoCodigo != null)
+        {
+            var formulario = await context.HttpContext.Request.ReadFormAsync(context.HttpContext.RequestAborted);
+            // Se incluyen las fuentes de MVC y sus prefijos de parámetro (por ejemplo dto.CodigoContrato).
+            var valores = formulario.Select(x => new KeyValuePair<string, string?>(x.Key, x.Value.ToString()))
+                .Concat(context.HttpContext.Request.Query.Select(x => new KeyValuePair<string, string?>(x.Key, x.Value.ToString())))
+                .Concat(context.RouteData.Values.Select(x => new KeyValuePair<string, string?>(x.Key, Convert.ToString(x.Value))));
+            accion = AccionGuardar(valores, _campoCodigo);
+        }
+        if (!permisos.TienePermiso(perfil, _opcion, accion))
         {
             context.Result = EsApi(context.HttpContext)
                 ? new ObjectResult(ApiRespuesta<object>.Fallo("No tiene permiso para realizar esta operación.")) { StatusCode = StatusCodes.Status403Forbidden }
                 : new ContentResult { StatusCode = StatusCodes.Status403Forbidden, Content = "No tiene permiso para realizar esta operación.", ContentType = "text/plain; charset=utf-8" };
         }
-        return Task.CompletedTask;
     }
 
     private static bool EsApi(HttpContext contexto) => contexto.Request.Path.StartsWithSegments("/api");
+
+    public static PermisoAccion AccionGuardar(IEnumerable<KeyValuePair<string, string?>> valores, string campoCodigo) =>
+        valores.Any(x => (x.Key.Equals(campoCodigo, StringComparison.OrdinalIgnoreCase) ||
+                         x.Key.EndsWith("." + campoCodigo, StringComparison.OrdinalIgnoreCase)) && !string.IsNullOrWhiteSpace(x.Value))
+            ? PermisoAccion.Editar : PermisoAccion.Crear;
 }

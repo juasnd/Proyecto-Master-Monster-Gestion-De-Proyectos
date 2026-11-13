@@ -50,7 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function registrar(formatoReporte) {
         if (!modal.dataset.codigoReporte) return;
         const cuerpo = new URLSearchParams({ accion: 'registrar', codigoReporte: modal.dataset.codigoReporte, modulo: modal.dataset.modulo || '', tipoReporte: modal.dataset.titulo || 'Reporte', formato: formatoReporte, totalRegistros: String(filas.length), filtros: [...new FormData(form)].filter(([, v]) => v).map(([k, v]) => `${k}: ${v}`).join('; ') });
-        fetch('/ReporteController', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' }, body: cuerpo }).catch(() => {});
+        window.MonsterHttp.enviarFormulario('/ReporteController', cuerpo).catch(error => console.warn('No se pudo registrar el historial del reporte.', error));
     }
     const csvCelda = v => `"${String(v ?? '').replaceAll('"', '""')}"`;
     modal.querySelector('[data-reporte-csv]').addEventListener('click', () => { if (!validarDatos()) return; const csv = '\ufeff' + [columnas.map(c => csvCelda(etiqueta(c))).join(';'), ...filas.map(x => columnas.map(c => csvCelda(formato(x[c], c))).join(';'))].join('\r\n'); descargar(`${modal.dataset.archivo}.csv`, csv, 'text/csv;charset=utf-8'); registrar('CSV'); });

@@ -246,14 +246,7 @@ function registrarHistorialReporte(datos, accion) {
     cuerpo.append("totalRegistros", String(datos.filas ? datos.filas.length : 0));
     cuerpo.append("filtros", datos.filtros || "");
 
-    fetch(datos.registroUrl, {
-        method: "POST",
-        credentials: "same-origin",
-        headers: {
-            "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"
-        },
-        body: cuerpo.toString()
-    }).then(function (respuesta) {
+    window.MonsterHttp.enviarFormulario(datos.registroUrl, cuerpo).then(function (respuesta) {
         if (!respuesta.ok && window.console) {
             console.warn("No se pudo registrar el historial del reporte.");
         }

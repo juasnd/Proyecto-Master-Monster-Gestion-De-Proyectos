@@ -37,9 +37,10 @@ public sealed class ProyectoServicio
         var departamentos = _departamentos.Listar().ToDictionary(x => x.Codigo, StringComparer.OrdinalIgnoreCase);
         var empleados = _empleados.Listar().ToDictionary(x => x.PeempCodigo, StringComparer.OrdinalIgnoreCase);
         var resultado = new List<ProyectoListadoVm>();
+        var costos = (await _costos.ListarAsync()).ToDictionary(x => x.CodigoProyecto, StringComparer.OrdinalIgnoreCase);
         foreach (var proyecto in await _proyectos.ListarAsync(incluirInactivos))
         {
-            var costo = await _costos.CalcularAsync(proyecto.Codigo);
+            costos.TryGetValue(proyecto.Codigo, out var costo);
             departamentos.TryGetValue(proyecto.CodigoDepartamento, out var departamento);
             empleados.TryGetValue(proyecto.CodigoJefeProyecto, out var jefe);
             resultado.Add(new ProyectoListadoVm
@@ -47,7 +48,7 @@ public sealed class ProyectoServicio
                 Proyecto = proyecto,
                 NombreDepartamento = departamento?.Descripcion ?? "Departamento no disponible",
                 NombreJefeProyecto = jefe == null ? "Jefe no disponible" : Nombre(jefe),
-                SaldoDisponible = costo.SaldoDisponible
+                SaldoDisponible = costo?.SaldoDisponible ?? proyecto.Presupuesto
             });
         }
         return resultado;

@@ -10,7 +10,11 @@ using PROYECTO_MONGO_DOTNET.Services.Seguridad;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllersWithViews().AddJsonOptions(opciones =>
+builder.Services.AddControllersWithViews(opciones =>
+{
+    opciones.Filters.Add<SesionActivaFiltro>(-2000);
+    opciones.Filters.Add(new AutoValidateAntiforgeryTokenAttribute());
+}).AddJsonOptions(opciones =>
 {
     opciones.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
 });
@@ -28,9 +32,10 @@ builder.Services.Configure<ApiBehaviorOptions>(opciones =>
         }
 
         var errores = contexto.ModelState.Where(x => x.Value?.Errors.Count > 0)
+            .GroupBy(x => NormalizarCampo(x.Key), StringComparer.OrdinalIgnoreCase)
             .ToDictionary(
-                x => NormalizarCampo(x.Key),
-                x => x.Value!.Errors.Select(e =>
+                grupo => grupo.Key,
+                grupo => grupo.SelectMany(x => x.Value!.Errors).Select(e =>
                 {
                     var mensaje = e.ErrorMessage ?? "";
                     if (mensaje.Contains("field is required", StringComparison.OrdinalIgnoreCase)) return "Este campo es obligatorio.";
@@ -46,6 +51,9 @@ builder.Services.Configure<ApiBehaviorOptions>(opciones =>
 builder.Services.AddSwaggerGen();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddAntiforgery(opciones => opciones.HeaderName = "X-CSRF-TOKEN");
+builder.Services.AddDistributedMemoryCache();
+builder.Services.AddScoped<SesionActivaFiltro>();
+builder.Services.AddSingleton<PROYECTO_MONGO_DOTNET.Services.Personal.FotoEmpleadoServicio>();
 builder.Services.AddSession(opciones =>
 {
     opciones.IdleTimeout = TimeSpan.FromMinutes(60);
@@ -72,14 +80,18 @@ builder.Services.AddSingleton<AuditoriaDAO>();
 builder.Services.AddSingleton<AsignacionUsuarioPerfilDAO>();
 
 builder.Services.AddSingleton<IProyectoRepositorio, ProyectoRepositorio>();
+builder.Services.AddSingleton<IProyectoTransaccionRepositorio, ProyectoTransaccionRepositorio>();
 builder.Services.AddSingleton<IAsignacionProyectoRepositorio, AsignacionProyectoRepositorio>();
 builder.Services.AddSingleton<ISeguimientoProyectoRepositorio, SeguimientoProyectoRepositorio>();
 builder.Services.AddSingleton<IPlanificacionProyectoRepositorio, PlanificacionProyectoRepositorio>();
 builder.Services.AddSingleton<ContratoRepositorio>();
 builder.Services.AddSingleton<CategoriaGastoRepositorio>();
+builder.Services.AddSingleton<ICategoriaGastoRepositorio>(sp => sp.GetRequiredService<CategoriaGastoRepositorio>());
 builder.Services.AddSingleton<ParametroFinancieroRepositorio>();
 builder.Services.AddSingleton<MovimientoProyectoRepositorio>();
+builder.Services.AddSingleton<IMovimientoProyectoRepositorio>(sp => sp.GetRequiredService<MovimientoProyectoRepositorio>());
 builder.Services.AddSingleton<CostoProyectoServicio>();
+builder.Services.AddSingleton<ICostoProyectoRepositorio, CostoProyectoRepositorio>();
 builder.Services.AddSingleton<ProyectoServicio>();
 builder.Services.AddSingleton<AsignacionProyectoServicio>();
 builder.Services.AddSingleton<SeguimientoProyectoServicio>();
@@ -104,7 +116,7 @@ else
     app.UseSwaggerUI();
 }
 
-app.UseStaticFiles();
+app.UseWhen(contexto => !contexto.Request.Path.StartsWithSegments("/uploads/empleados"), rama => rama.UseStaticFiles());
 app.UseRouting();
 app.UseSession();
 app.UseAuthorization();

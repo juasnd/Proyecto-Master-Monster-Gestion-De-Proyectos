@@ -1,3 +1,4 @@
+using PROYECTO_MONGO_DOTNET.Services.Seguridad;
 using Microsoft.AspNetCore.Mvc;
 using PROYECTO_MONGO_DOTNET.Models;
 using PROYECTO_MONGO_DOTNET.Services;
@@ -5,6 +6,7 @@ using PROYECTO_MONGO_DOTNET.Services;
 namespace PROYECTO_MONGO_DOTNET.Controllers;
 
 [Route("DepartamentoController")]
+[PermisoModulo("departamentos.jsp")]
 public class DepartamentoController : AppController
 {
     private readonly DepartamentoDAO _departamentos;
@@ -38,13 +40,18 @@ public class DepartamentoController : AppController
             vm.Modo = vm.DepartamentoVer == null ? "listar" : "ver";
             if (vm.DepartamentoVer == null) vm.Error = "no_encontrado";
         }
-        if (accion == "eliminar" && codigo != null)
-        {
-            if (_departamentos.EnUso(codigo)) return Redirect("/DepartamentoController?error=en_uso");
-            return Redirect("/DepartamentoController?mensaje=" + (_departamentos.Eliminar(codigo) ? "eliminado" : "no_eliminado"));
-        }
+        if (accion == "eliminar") return StatusCode(StatusCodes.Status405MethodNotAllowed);
 
         return View("Departamentos", vm);
+    }
+
+    [HttpPost("eliminar")]
+    [ValidateAntiForgeryToken]
+    public IActionResult Eliminar(string codigo)
+    {
+        if (_departamentos.EnUso(codigo)) return Redirect("/DepartamentoController?error=en_uso");
+        return Redirect("/DepartamentoController?mensaje=" + (_departamentos.Eliminar(codigo) ? "eliminado" : "no_eliminado"));
+
     }
 
     [HttpPost]

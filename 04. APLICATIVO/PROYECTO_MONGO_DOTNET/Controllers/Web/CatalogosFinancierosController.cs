@@ -11,7 +11,7 @@ public sealed class CategoriasGastoController : Controller
 {
     private readonly CatalogosFinancierosServicio _servicio; public CategoriasGastoController(CatalogosFinancierosServicio servicio) => _servicio = servicio;
     [HttpGet("/Finanzas/Categorias"), HttpGet("/categoriasGasto.jsp"), PermisoRequerido("FIN_CATEGORIAS")] public async Task<IActionResult> Index(string? mensaje = null) => View("~/Views/Finanzas/Categorias.cshtml", new CategoriasPaginaVm { Categorias = await _servicio.ListarCategoriasAsync(), Mensaje = mensaje });
-    [HttpPost("/Finanzas/Categorias"), ValidateAntiForgeryToken, PermisoRequerido("FIN_CATEGORIAS", PermisoAccion.Crear)] public async Task<IActionResult> Guardar(GuardarCategoriaGastoDto dto) { try { await _servicio.GuardarCategoriaAsync(dto, Usuario); return Redirect("/Finanzas/Categorias?mensaje=guardada"); } catch (ExcepcionNegocio ex) { return View("~/Views/Finanzas/Categorias.cshtml", new CategoriasPaginaVm { Categorias = await _servicio.ListarCategoriasAsync(), Error = ex.Message }); } }
+    [HttpPost("/Finanzas/Categorias"), ValidateAntiForgeryToken, PermisoRequerido("FIN_CATEGORIAS", campoCodigo: "CodigoCategoria")] public async Task<IActionResult> Guardar(GuardarCategoriaGastoDto dto) { try { await _servicio.GuardarCategoriaAsync(dto, Usuario); return Redirect("/Finanzas/Categorias?mensaje=guardada"); } catch (ExcepcionNegocio ex) { return View("~/Views/Finanzas/Categorias.cshtml", new CategoriasPaginaVm { Categorias = await _servicio.ListarCategoriasAsync(), Error = ex.Message }); } }
     private string Usuario => HttpContext.Session.GetString("usuarioLogueado") ?? "";
 }
 

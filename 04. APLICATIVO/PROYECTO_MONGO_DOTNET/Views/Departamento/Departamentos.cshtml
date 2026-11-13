@@ -153,7 +153,7 @@
                                 <div class="acciones-tabla">
                                     <a class="btn-accion-icono accion-ver" href="/DepartamentoController?accion=ver&codigo=@dep.Codigo" title="Ver" aria-label="Ver"><img src="/img/iconos_master_monster/ver.png" alt=""></a>
                                     <a class="btn-accion-icono accion-editar" href="/DepartamentoController?accion=editar&codigo=@dep.Codigo" title="Editar" aria-label="Editar"><img src="/img/iconos_master_monster/editar.png" alt=""></a>
-                                    <a class="btn-accion-icono accion-eliminar" href="/DepartamentoController?accion=eliminar&codigo=@dep.Codigo" title="Eliminar" aria-label="Eliminar" onclick="return confirm('Seguro que desea eliminar este departamento?');"><img src="/img/iconos_master_monster/eliminar.png" alt=""></a>
+                                    <form action="/DepartamentoController/eliminar" method="post" class="form-accion-inline" onsubmit="return confirm('Seguro que desea eliminar este departamento?');">@Html.AntiForgeryToken()<input type="hidden" name="accion" value="eliminar"><input type="hidden" name="codigo" value="@dep.Codigo"><button type="submit" class="btn-accion-icono accion-eliminar" title="Eliminar" aria-label="Eliminar" ><img src="/img/iconos_master_monster/eliminar.png" alt=""></button></form>
                                 </div>
                             </td>
                         </tr>

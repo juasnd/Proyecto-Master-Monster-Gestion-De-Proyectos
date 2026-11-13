@@ -155,7 +155,7 @@
                                 <div class="acciones-tabla">
                                     <a class="btn-accion-icono accion-editar" href="/EmpleadoController?accion=editar&codigo=@item.PeempCodigo" title="Editar" aria-label="Editar"><img src="/img/iconos_master_monster/editar.png" alt=""></a>
                                     <a class="btn-accion-icono accion-ver" href="/EmpleadoController?accion=ver&codigo=@item.PeempCodigo" title="Ver" aria-label="Ver"><img src="/img/iconos_master_monster/ver.png" alt=""></a>
-                                    <a class="btn-accion-icono accion-eliminar" href="/EmpleadoController?accion=eliminar&codigo=@item.PeempCodigo" title="Eliminar" aria-label="Eliminar" onclick="return confirm('Seguro que desea eliminar este empleado?');"><img src="/img/iconos_master_monster/eliminar.png" alt=""></a>
+                                    <form action="/EmpleadoController/eliminar" method="post" class="form-accion-inline" onsubmit="return confirm('Seguro que desea eliminar este empleado?');">@Html.AntiForgeryToken()<input type="hidden" name="accion" value="eliminar"><input type="hidden" name="codigo" value="@item.PeempCodigo"><button type="submit" class="btn-accion-icono accion-eliminar" title="Eliminar" aria-label="Eliminar" ><img src="/img/iconos_master_monster/eliminar.png" alt=""></button></form>
                                 </div>
                             </td>
                         </tr>

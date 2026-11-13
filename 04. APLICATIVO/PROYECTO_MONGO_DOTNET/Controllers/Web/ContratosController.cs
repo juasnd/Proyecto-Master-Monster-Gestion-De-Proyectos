@@ -13,7 +13,7 @@ public sealed class ContratosController : Controller
     private readonly ContratoServicio _servicio; private readonly EmpleadoDAO _empleados;
     public ContratosController(ContratoServicio servicio, EmpleadoDAO empleados) { _servicio = servicio; _empleados = empleados; }
     [HttpGet, HttpGet("/contratos.jsp")] public async Task<IActionResult> Index(string? mensaje = null) => View("~/Views/Finanzas/Contratos.cshtml", new ContratosPaginaVm { Contratos = await _servicio.ListarAsync(), Empleados = _empleados.Listar(), Mensaje = mensaje });
-    [HttpPost, ValidateAntiForgeryToken, PermisoRequerido("FIN_CONTRATOS", PermisoAccion.Crear)]
+    [HttpPost, ValidateAntiForgeryToken, PermisoRequerido("FIN_CONTRATOS", campoCodigo: "CodigoContrato")]
     public async Task<IActionResult> Guardar(GuardarContratoDto dto)
     {
         try { await _servicio.GuardarAsync(dto, Usuario); return Redirect("/Finanzas/Contratos?mensaje=guardado"); }

@@ -1,3 +1,6 @@
+using PROYECTO_MONGO_DOTNET.Services.Personal;
+using PROYECTO_MONGO_DOTNET.Services.Compartidos;
+using PROYECTO_MONGO_DOTNET.Services.Seguridad;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc;
@@ -7,22 +10,20 @@ using PROYECTO_MONGO_DOTNET.Services;
 namespace PROYECTO_MONGO_DOTNET.Controllers;
 
 [Route("EmpleadoController")]
+[PermisoModulo("empleados.jsp")]
 public class EmpleadoController : AppController
 {
-    private const long FotoMaxBytes = 2L * 1024L * 1024L;
-    private const string FotoDir = "uploads/empleados";
-    private static readonly HashSet<string> FotoExtensiones = new(StringComparer.OrdinalIgnoreCase) { ".jpg", ".jpeg", ".png", ".webp" };
-    private static readonly HashSet<string> FotoMime = new(StringComparer.OrdinalIgnoreCase) { "image/jpeg", "image/png", "image/webp" };
-
     private readonly EmpleadoDAO _empleados;
     private readonly PermisoDAO _permisos;
-    private readonly IWebHostEnvironment _env;
+    private readonly FotoEmpleadoServicio _fotos;
+    private readonly ILogger<EmpleadoController> _logger;
 
-    public EmpleadoController(EmpleadoDAO empleados, PermisoDAO permisos, IWebHostEnvironment env)
+    public EmpleadoController(EmpleadoDAO empleados, PermisoDAO permisos, FotoEmpleadoServicio fotos, ILogger<EmpleadoController> logger)
     {
         _empleados = empleados;
         _permisos = permisos;
-        _env = env;
+        _fotos = fotos;
+        _logger = logger;
     }
 
     [HttpGet]
@@ -56,16 +57,21 @@ public class EmpleadoController : AppController
             if (emp == null) vm.Error = "No se encontro el empleado solicitado.";
             else { vm.EmpleadoForm = emp; vm.Modo = accion; }
         }
-        if (accion == "eliminar" && codigo != null)
-        {
-            var emp = _empleados.BuscarPorCodigo(codigo);
-            if (emp == null) return Redirect("/EmpleadoController?error=no_encontrado");
-            if (_empleados.EmpleadoTieneRelaciones(codigo) || _empleados.PersonaTieneRelacionesExternas(emp.Persona.PeperCodigo, codigo))
-                return Redirect("/EmpleadoController?error=en_uso");
-            return Redirect("/EmpleadoController?mensaje=" + (_empleados.Eliminar(codigo) ? "eliminado" : "no_eliminado"));
-        }
+        if (accion == "eliminar") return StatusCode(StatusCodes.Status405MethodNotAllowed);
 
         return View("Empleados", vm);
+    }
+
+    [HttpPost("eliminar")]
+    [ValidateAntiForgeryToken]
+    public IActionResult Eliminar(string codigo)
+    {
+        var emp = _empleados.BuscarPorCodigo(codigo);
+        if (emp == null) return Redirect("/EmpleadoController?error=no_encontrado");
+        if (_empleados.EmpleadoTieneRelaciones(codigo) || _empleados.PersonaTieneRelacionesExternas(emp.Persona.PeperCodigo, codigo))
+            return Redirect("/EmpleadoController?error=en_uso");
+        return Redirect("/EmpleadoController?mensaje=" + (_empleados.Eliminar(codigo) ? "eliminado" : "no_eliminado"));
+
     }
 
     [HttpPost]
@@ -83,14 +89,15 @@ public class EmpleadoController : AppController
         emp.Persona.CargasFamiliares = emp.Familiares.Count(f => string.Equals(f.CargaFamiliar, "S", StringComparison.OrdinalIgnoreCase));
 
         var fotoPart = Request.Form.Files["fotoEmpleado"];
-        var fotoAnterior = Valor(Request.Form, "fotoActual");
-        if (!nuevo) emp.Persona.Foto = fotoAnterior;
+        var existente = nuevo ? null : _empleados.BuscarPorCodigo(emp.PeempCodigo);
+        var fotoAnterior = existente?.Persona.Foto ?? "";
+        emp.Persona.Foto = fotoAnterior;
+        if (!nuevo && existente != null && !string.Equals(existente.Persona.PeperCodigo, emp.Persona.PeperCodigo, StringComparison.OrdinalIgnoreCase))
+            errores.Add("La persona enviada no corresponde al empleado que desea actualizar.");
 
         errores.AddRange(ValidarEmpleado(emp, nuevo));
         errores.AddRange(ValidarFamiliares(emp.Familiares));
         errores.AddRange(ValidarFormaciones(emp.Formaciones));
-        var errorFoto = ValidarFoto(fotoPart);
-        if (errorFoto != null) errores.Add(errorFoto);
 
         if (!nuevo)
         {
@@ -110,19 +117,22 @@ public class EmpleadoController : AppController
         {
             if (FotoSeleccionada(fotoPart))
             {
-                fotoGuardada = await GuardarFoto(fotoPart!, nuevo ? emp.Persona.Cedula : emp.Persona.PeperCodigo);
+                fotoGuardada = await _fotos.GuardarAsync(fotoPart!, HttpContext.RequestAborted);
                 emp.Persona.Foto = fotoGuardada;
             }
 
             if (nuevo) _empleados.Guardar(emp); else _empleados.Actualizar(emp);
-            if (!nuevo && fotoGuardada != null) EliminarFotoSiExiste(fotoAnterior, fotoGuardada);
+            if (!nuevo && fotoGuardada != null) _fotos.Eliminar(fotoAnterior, fotoGuardada);
 
             return Redirect("/EmpleadoController?mensaje=" + (nuevo ? "guardado" : "actualizado"));
         }
         catch (Exception ex)
         {
-            EliminarFotoSiExiste(fotoGuardada, null);
-            return VolverAlFormulario(nuevo ? "nuevo" : "editar", emp, MensajeErrorGuardarEmpleado(ex));
+            _fotos.Eliminar(fotoGuardada);
+            emp.Persona.Foto = fotoAnterior;
+            if (ex is OperationCanceledException && HttpContext.RequestAborted.IsCancellationRequested) throw;
+            if (ex is not ExcepcionNegocio) _logger.LogError(ex, "No se pudo guardar el empleado {CodigoEmpleado}", emp.PeempCodigo);
+            return VolverAlFormulario(nuevo ? "nuevo" : "editar", emp, ex is ExcepcionNegocio ? ex.Message : "No se pudo guardar el empleado. Revise los datos e intente nuevamente.");
         }
     }
 
@@ -308,46 +318,6 @@ public class EmpleadoController : AppController
         return errores;
     }
 
-    private static string? ValidarFoto(IFormFile? foto)
-    {
-        if (!FotoSeleccionada(foto)) return null;
-        var extension = Path.GetExtension(foto!.FileName);
-        if (!FotoExtensiones.Contains(extension)) return "La foto debe ser jpg, jpeg, png o webp.";
-        if (!FotoMime.Contains(foto.ContentType)) return "El tipo de archivo no es una imagen valida.";
-        if (foto.Length > FotoMaxBytes) return "La foto no debe superar 2 MB.";
-        return null;
-    }
-
-    private async Task<string> GuardarFoto(IFormFile foto, string codigo)
-    {
-        var webRoot = _env.WebRootPath ?? Path.Combine(AppContext.BaseDirectory, "wwwroot");
-        var directorio = Path.GetFullPath(Path.Combine(webRoot, FotoDir));
-        Directory.CreateDirectory(directorio);
-
-        var extension = Path.GetExtension(foto.FileName).ToLowerInvariant();
-        var limpio = Regex.Replace(codigo ?? "", @"[^A-Za-z0-9_-]", "");
-        if (string.IsNullOrWhiteSpace(limpio)) limpio = "empleado";
-        var nombre = limpio + "_" + DateTimeOffset.Now.ToUnixTimeMilliseconds() + extension;
-        var destino = Path.GetFullPath(Path.Combine(directorio, nombre));
-        if (!destino.StartsWith(directorio, StringComparison.OrdinalIgnoreCase))
-            throw new IOException("Ruta de foto no valida.");
-
-        await using var stream = System.IO.File.Create(destino);
-        await foto.CopyToAsync(stream);
-        return FotoDir.Replace('\\', '/') + "/" + nombre;
-    }
-
-    private void EliminarFotoSiExiste(string? rutaRelativa, string? excepto)
-    {
-        if (string.IsNullOrWhiteSpace(rutaRelativa) || rutaRelativa == excepto || !rutaRelativa.StartsWith(FotoDir + "/", StringComparison.OrdinalIgnoreCase)) return;
-        var webRoot = _env.WebRootPath ?? Path.Combine(AppContext.BaseDirectory, "wwwroot");
-        var root = Path.GetFullPath(webRoot);
-        var carpetaFotos = Path.GetFullPath(Path.Combine(root, FotoDir));
-        var archivo = Path.GetFullPath(Path.Combine(root, rutaRelativa));
-        if (archivo.StartsWith(carpetaFotos, StringComparison.OrdinalIgnoreCase) && System.IO.File.Exists(archivo))
-            System.IO.File.Delete(archivo);
-    }
-
     private static bool FotoSeleccionada(IFormFile? foto) => foto != null && foto.Length > 0;
     private static bool FormacionTieneDatos(Formacion f) => new[] { f.Nivel, f.Titulo, f.Institucion, f.FechaInicio, f.FechaFin, f.Observacion }.Any(v => !string.IsNullOrWhiteSpace(v));
     private static void Requerido(List<string> errores, string? valor, string mensaje) { if (string.IsNullOrWhiteSpace(valor)) errores.Add(mensaje); }
@@ -397,16 +367,6 @@ public class EmpleadoController : AppController
         "no_encontrado" => "No se encontro el empleado solicitado.",
         _ => error ?? ""
     };
-
-    private static string MensajeErrorGuardarEmpleado(Exception ex)
-    {
-        var detalle = ex.Message ?? "";
-        if (detalle.Contains("cedula", StringComparison.OrdinalIgnoreCase)) return detalle;
-        if (detalle.Contains("codigo", StringComparison.OrdinalIgnoreCase)) return detalle;
-        return string.IsNullOrWhiteSpace(detalle)
-            ? "No se pudo guardar el empleado. Revise los datos e intente nuevamente."
-            : "No se pudo guardar el empleado. Detalle: " + detalle;
-    }
 
     private sealed class FamiliarEntrada
     {

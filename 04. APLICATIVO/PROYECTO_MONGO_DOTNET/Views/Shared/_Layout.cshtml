@@ -78,6 +78,7 @@
     <title>@ViewData["Title"] - Master Monster</title>
     <link rel="icon" href="/img/favicon.png">
     <link rel="stylesheet" href="/CSS/estilos.css" asp-append-version="true">
+    <script src="/js/http-compartido.js" asp-append-version="true" defer></script>
 </head>
 <body class="body-dashboard body-treeview">
     <header class="topbar topbar-monster-simple">
@@ -96,7 +97,7 @@
                 <strong>@usuarioNombre</strong>
                 <small>@perfilNombre</small>
             </div>
-            <a href="/Logout" class="btn-salir-simple">Cerrar sesión</a>
+            <form action="/Logout" method="post" class="form-accion-inline">@Html.AntiForgeryToken()<button type="submit" class="btn-salir-simple">Cerrar sesión</button></form>
         </div>
     </header>
 

@@ -13,6 +13,10 @@ public sealed class ManejoExcepcionesMiddleware
     public async Task InvokeAsync(HttpContext contexto)
     {
         try { await _siguiente(contexto); }
+        catch (OperationCanceledException) when (contexto.RequestAborted.IsCancellationRequested)
+        {
+            // El cliente cerró la solicitud; no es un fallo interno del aplicativo.
+        }
         catch (ExcepcionNegocio ex)
         {
             if (contexto.Response.HasStarted) throw;

@@ -9,18 +9,18 @@ public sealed class SeguimientoProyectoServicio
 {
     private readonly IProyectoRepositorio _proyectos;
     private readonly ISeguimientoProyectoRepositorio _seguimientos;
-    private readonly IAsignacionProyectoRepositorio _asignaciones;
+    private readonly IProyectoTransaccionRepositorio _transacciones;
     private readonly IPlanificacionProyectoRepositorio _planes;
     private readonly CodigoDAO _codigos;
     private readonly PlanificacionProyectoServicio _planificacion;
 
     public SeguimientoProyectoServicio(IProyectoRepositorio proyectos, ISeguimientoProyectoRepositorio seguimientos,
-        IAsignacionProyectoRepositorio asignaciones, IPlanificacionProyectoRepositorio planes,
+        IProyectoTransaccionRepositorio transacciones, IPlanificacionProyectoRepositorio planes,
         CodigoDAO codigos, PlanificacionProyectoServicio planificacion)
     {
         _proyectos = proyectos;
         _seguimientos = seguimientos;
-        _asignaciones = asignaciones;
+        _transacciones = transacciones;
         _planes = planes;
         _codigos = codigos;
         _planificacion = planificacion;
@@ -32,13 +32,7 @@ public sealed class SeguimientoProyectoServicio
     {
         var proyecto = await Requerido(codigo);
         var destino = N(dto.Estado);
-        var permitida = (proyecto.Estado, destino) switch
-        {
-            ("PLANIFICADO", "EN_CURSO") => true,
-            ("EN_CURSO", "PAUSADO") => true,
-            ("PAUSADO", "EN_CURSO") => true,
-            _ => false
-        };
+        var permitida = ReglasProyecto.PuedeCambiarEstado(proyecto.Estado, destino);
         if (!permitida) throw ExcepcionNegocio.Conflicto($"No se permite cambiar de {proyecto.Estado} a {destino}. Use las acciones guiadas disponibles.");
         if (destino == "EN_CURSO" && proyecto.Estado == "PLANIFICADO")
         {
@@ -83,11 +77,7 @@ public sealed class SeguimientoProyectoServicio
         if (!validacion.PuedeFinalizar) throw ExcepcionNegocio.Conflicto(string.Join(" ", validacion.Pendientes));
         proyecto.Avance = 100;
         proyecto.FechaFinReal = DateTime.SpecifyKind(dto.FechaFinReal.Date, DateTimeKind.Utc);
-        var actualizado = await Cambiar(proyecto, "FINALIZADO", dto.ObservacionFinal.Trim(), usuario);
-        actualizado.FechaFinReal = proyecto.FechaFinReal;
-        await _proyectos.ActualizarAsync(actualizado);
-        await _asignaciones.CerrarActivasAsync(proyecto.Codigo, usuario, DateTime.UtcNow);
-        return actualizado;
+        return await Cambiar(proyecto, "FINALIZADO", dto.ObservacionFinal.Trim(), usuario);
     }
 
     public async Task<Proyecto> CancelarAsync(string codigo, string motivo, string usuario)
@@ -95,11 +85,8 @@ public sealed class SeguimientoProyectoServicio
         if (string.IsNullOrWhiteSpace(motivo)) throw new ExcepcionNegocio("El motivo de cancelación es obligatorio.");
         var proyecto = await Requerido(codigo);
         if (!proyecto.Activo || EstadosProyecto.Cerrados.Contains(proyecto.Estado)) throw ExcepcionNegocio.Conflicto("El proyecto ya está cerrado o inactivo.");
-        var actualizado = await Cambiar(proyecto, "CANCELADO", motivo.Trim(), usuario);
-        actualizado.FechaFinReal = DateTime.UtcNow.Date;
-        await _proyectos.ActualizarAsync(actualizado);
-        await _asignaciones.CerrarActivasAsync(proyecto.Codigo, usuario, DateTime.UtcNow);
-        return actualizado;
+        proyecto.FechaFinReal = DateTime.UtcNow.Date;
+        return await Cambiar(proyecto, "CANCELADO", motivo.Trim(), usuario);
     }
 
     private async Task<Proyecto> Cambiar(Proyecto proyecto, string estado, string observacion, string usuario)
@@ -121,8 +108,7 @@ public sealed class SeguimientoProyectoServicio
         proyecto.Observacion = observacion;
         proyecto.ModificadoPor = usuario;
         proyecto.FechaModificacion = seguimiento.FechaRegistro;
-        await _proyectos.ActualizarAsync(proyecto);
-        await _seguimientos.CrearAsync(seguimiento);
+        await _transacciones.CambiarEstadoAsync(proyecto, seguimiento);
         return proyecto;
     }
 

@@ -176,7 +176,7 @@
                                 <div class="acciones-tabla">
                                     <a class="btn-accion-icono accion-ver" href="/CargoController?accion=ver&depCode=@cargo.PedepCodigo&carCode=@cargo.PecarCodigo" title="Ver" aria-label="Ver"><img src="/img/iconos_master_monster/ver.png" alt=""></a>
                                     <a class="btn-accion-icono accion-editar" href="/CargoController?accion=editar&depCode=@cargo.PedepCodigo&carCode=@cargo.PecarCodigo" title="Editar" aria-label="Editar"><img src="/img/iconos_master_monster/editar.png" alt=""></a>
-                                    <a class="btn-accion-icono accion-eliminar" href="/CargoController?accion=eliminar&depCode=@cargo.PedepCodigo&carCode=@cargo.PecarCodigo" title="Eliminar" aria-label="Eliminar" onclick="return confirm('Seguro que desea eliminar este cargo?');"><img src="/img/iconos_master_monster/eliminar.png" alt=""></a>
+                                    <form action="/CargoController/eliminar" method="post" class="form-accion-inline" onsubmit="return confirm('Seguro que desea eliminar este cargo?');">@Html.AntiForgeryToken()<input type="hidden" name="accion" value="eliminar"><input type="hidden" name="depCode" value="@cargo.PedepCodigo"><input type="hidden" name="carCode" value="@cargo.PecarCodigo"><button type="submit" class="btn-accion-icono accion-eliminar" title="Eliminar" aria-label="Eliminar" ><img src="/img/iconos_master_monster/eliminar.png" alt=""></button></form>
                                 </div>
                             </td>
                         </tr>
